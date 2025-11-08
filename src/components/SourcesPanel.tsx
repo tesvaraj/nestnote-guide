@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 
-interface SavedResource {
+export interface SavedResource {
   id: string;
   name: string;
   type: string;
@@ -15,27 +15,11 @@ interface SavedResource {
   notes?: string;
 }
 
-const mockSavedResources: SavedResource[] = [
-  { 
-    id: "1", 
-    name: "Youth Emergency Shelter", 
-    type: "Housing", 
-    address: "123 Main St",
-    phone: "(555) 123-4567",
-    hours: "24/7 intake",
-    notes: "Ages 12-24, immediate placement available"
-  },
-  { 
-    id: "2", 
-    name: "Community Food Bank", 
-    type: "Food", 
-    address: "456 Oak Ave",
-    phone: "(555) 234-5678",
-    hours: "Mon-Fri 9am-5pm"
-  },
-];
+interface SourcesPanelProps {
+  savedResources: SavedResource[];
+}
 
-export const SourcesPanel = () => {
+export const SourcesPanel = ({ savedResources }: SourcesPanelProps) => {
   const [expandedResource, setExpandedResource] = useState<string | null>(null);
 
   return (
@@ -46,13 +30,13 @@ export const SourcesPanel = () => {
           <h2 className="text-lg font-semibold text-foreground">Saved Resources</h2>
         </div>
         <p className="text-sm text-muted-foreground mt-1">
-          {mockSavedResources.length} saved from chat
+          {savedResources.length} saved from chat
         </p>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="p-3 space-y-2">
-          {mockSavedResources.length === 0 ? (
+          {savedResources.length === 0 ? (
             <div className="text-center py-8 px-4">
               <Bookmark className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">
@@ -60,7 +44,7 @@ export const SourcesPanel = () => {
               </p>
             </div>
           ) : (
-            mockSavedResources.map((resource) => (
+            savedResources.map((resource) => (
               <Card
                 key={resource.id}
                 className="p-3 hover:bg-secondary/50 transition-colors cursor-pointer"

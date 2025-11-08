@@ -5,14 +5,9 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { SavedResource } from "@/components/SourcesPanel";
 
-interface Recommendation {
-  id: string;
-  name: string;
-  type: string;
-  address: string;
-  phone?: string;
-  hours?: string;
+interface Recommendation extends SavedResource {
   matchReason: string;
 }
 
@@ -69,13 +64,22 @@ const mockMessages: Message[] = [
   },
 ];
 
-export const ChatPanel = () => {
+interface ChatPanelProps {
+  savedResources: SavedResource[];
+  onSaveResource: (resource: SavedResource) => void;
+}
+
+export const ChatPanel = ({ savedResources, onSaveResource }: ChatPanelProps) => {
   const [messages, setMessages] = useState<Message[]>(mockMessages);
   const [input, setInput] = useState("");
-  const [savedResources, setSavedResources] = useState<Set<string>>(new Set());
 
-  const handleSaveResource = (resourceId: string) => {
-    setSavedResources(prev => new Set(prev).add(resourceId));
+  const handleSaveResource = (rec: Recommendation) => {
+    const { matchReason, ...resource } = rec;
+    onSaveResource(resource);
+  };
+
+  const isResourceSaved = (resourceId: string) => {
+    return savedResources.some(r => r.id === resourceId);
   };
 
   const handleSend = () => {
@@ -146,13 +150,13 @@ export const ChatPanel = () => {
                           </div>
                           <Button
                             size="sm"
-                            variant={savedResources.has(rec.id) ? "secondary" : "default"}
-                            onClick={() => handleSaveResource(rec.id)}
+                            variant={isResourceSaved(rec.id) ? "secondary" : "default"}
+                            onClick={() => handleSaveResource(rec)}
                             className="shrink-0"
-                            disabled={savedResources.has(rec.id)}
+                            disabled={isResourceSaved(rec.id)}
                           >
                             <Bookmark className="h-3.5 w-3.5 mr-1" />
-                            {savedResources.has(rec.id) ? "Saved" : "Save"}
+                            {isResourceSaved(rec.id) ? "Saved" : "Save"}
                           </Button>
                         </div>
                         <div className="space-y-1.5 text-xs">

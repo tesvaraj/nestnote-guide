@@ -1,13 +1,22 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SourcesPanel } from "@/components/SourcesPanel";
+import { SourcesPanel, SavedResource } from "@/components/SourcesPanel";
 import { ChatPanel } from "@/components/ChatPanel";
 import { CardsPanel } from "@/components/CardsPanel";
 
 const Index = () => {
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  const [savedResources, setSavedResources] = useState<SavedResource[]>([]);
+
+  const handleSaveResource = (resource: SavedResource) => {
+    setSavedResources(prev => {
+      // Check if already saved
+      if (prev.some(r => r.id === resource.id)) return prev;
+      return [...prev, resource];
+    });
+  };
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -46,12 +55,15 @@ const Index = () => {
             ${leftPanelOpen ? "block" : "hidden lg:block lg:w-0"}
           `}
         >
-          <SourcesPanel />
+          <SourcesPanel savedResources={savedResources} />
         </div>
 
         {/* Middle Panel - Chat */}
         <div className="flex-1 min-w-0">
-          <ChatPanel />
+          <ChatPanel 
+            savedResources={savedResources}
+            onSaveResource={handleSaveResource}
+          />
         </div>
 
         {/* Right Panel - Cards */}
