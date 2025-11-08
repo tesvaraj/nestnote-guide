@@ -54,6 +54,7 @@ const Index = () => {
             ${leftPanelOpen ? "w-full lg:w-80" : "w-0"}
             transition-all duration-300 overflow-hidden
             ${leftPanelOpen ? "block" : "hidden lg:block lg:w-0"}
+            border-r border-panel-border
           `}
         >
           <SourcesPanel 
@@ -63,7 +64,7 @@ const Index = () => {
         </div>
 
         {/* Middle Panel - Chat */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 border-r border-panel-border">
           <ChatPanel 
             savedResources={savedResources}
             onSaveResource={handleSaveResource}
