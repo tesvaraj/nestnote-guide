@@ -1,4 +1,4 @@
-import { MapPin, Bed, FileText, User, AlertCircle } from "lucide-react";
+import { MapPin, Bed, User, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,23 +22,23 @@ export const CardsPanel = () => {
             </AlertDescription>
           </Alert>
 
-          {/* Your Plan Card */}
+          {/* Profile & Consent Card */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" />
-                Your Plan
+                <User className="h-4 w-4 text-primary" />
+                Profile
               </CardTitle>
               <CardDescription className="text-xs">
-                No active plan yet
+                Anonymous user
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-3">
-                Ask me questions to build a personalized action plan
+                Add info to get better recommendations
               </p>
-              <Button variant="outline" size="sm" className="w-full" disabled>
-                View Plan
+              <Button variant="outline" size="sm" className="w-full">
+                Update Profile
               </Button>
             </CardContent>
           </Card>
@@ -96,26 +96,6 @@ export const CardsPanel = () => {
             </CardContent>
           </Card>
 
-          {/* Profile & Consent Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <User className="h-4 w-4 text-primary" />
-                Profile
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Anonymous user
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-3">
-                Add info to get better recommendations
-              </p>
-              <Button variant="outline" size="sm" className="w-full">
-                Update Profile
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </ScrollArea>
     </div>
