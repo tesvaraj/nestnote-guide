@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { Send, Sparkles, Bookmark, MapPin, Phone, Clock } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Send, Sparkles, Bookmark, MapPin, Phone, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { SavedResource } from "@/components/SourcesPanel";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Recommendation extends SavedResource {
   matchReason: string;
@@ -26,41 +27,11 @@ const quickReplies = [
   "Show my plan",
 ];
 
-const mockMessages: Message[] = [
+const initialMessages: Message[] = [
   {
     id: "1",
     role: "assistant",
     content: "Hi! I'm here to help you find the support you need. What can I help you with today?",
-  },
-  {
-    id: "2",
-    role: "user",
-    content: "Find me a bed that I can get housing within one to two week time",
-  },
-  {
-    id: "3",
-    role: "assistant",
-    content: "I found some emergency housing options that can help you within 1-2 weeks. Here are my top recommendations:",
-    recommendations: [
-      {
-        id: "rec-1",
-        name: "Youth Emergency Shelter",
-        type: "Emergency Housing",
-        address: "123 Main St",
-        phone: "(555) 123-4567",
-        hours: "24/7 intake",
-        matchReason: "Immediate placement available for ages 12-24"
-      },
-      {
-        id: "rec-2",
-        name: "Safe Haven Transitional Housing",
-        type: "Transitional Housing",
-        address: "789 Elm St",
-        phone: "(555) 345-6789",
-        hours: "Mon-Fri 9am-6pm",
-        matchReason: "1-2 week wait list, up to 6 month stay"
-      }
-    ]
   },
 ];
 
@@ -70,8 +41,11 @@ interface ChatPanelProps {
 }
 
 export const ChatPanel = ({ savedResources, onSaveResource }: ChatPanelProps) => {
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const handleSaveResource = (rec: Recommendation) => {
     const { matchReason, ...resource } = rec;
@@ -82,27 +56,132 @@ export const ChatPanel = ({ savedResources, onSaveResource }: ChatPanelProps) =>
     return savedResources.some(r => r.id === resourceId);
   };
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: input,
+      content: input.trim(),
     };
 
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: "assistant",
-      content: `Emergency housing is available for youth ages 12-24 at several locations [1][2]. Services include safe overnight shelter, meals, and case management support [1].`,
-      citations: [
-        { id: "1", page: 3, text: "Emergency housing services available 24/7" },
-        { id: "2", page: 5, text: "Youth ages 12-24 eligible for services" },
-      ],
-    };
-
-    setMessages([...messages, userMessage, assistantMessage]);
+    const currentMessages = [...messages, userMessage];
+    setMessages(currentMessages);
     setInput("");
+    setIsLoading(true);
+
+    try {
+      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+      
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: currentMessages.map(m => ({
+            role: m.role,
+            content: m.content
+          }))
+        }),
+      });
+
+      if (!resp.ok) {
+        if (resp.status === 429) {
+          toast({
+            title: "Rate limit exceeded",
+            description: "Please try again in a moment.",
+            variant: "destructive",
+          });
+          setMessages(messages);
+          return;
+        }
+        if (resp.status === 402) {
+          toast({
+            title: "Payment required",
+            description: "Please add credits to continue using AI features.",
+            variant: "destructive",
+          });
+          setMessages(messages);
+          return;
+        }
+        throw new Error("Failed to get response");
+      }
+
+      if (!resp.body) throw new Error("No response body");
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let streamDone = false;
+      let assistantContent = "";
+
+      // Add assistant message placeholder
+      const assistantId = (Date.now() + 1).toString();
+      setMessages([...currentMessages, {
+        id: assistantId,
+        role: "assistant",
+        content: "",
+      }]);
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") {
+            streamDone = true;
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantContent += content;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === "assistant") {
+                  lastMsg.content = assistantContent;
+                }
+                return newMessages;
+              });
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Chat error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to get response. Please try again.",
+        variant: "destructive",
+      });
+      setMessages(messages);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleQuickReply = (reply: string) => {
@@ -125,7 +204,7 @@ export const ChatPanel = ({ savedResources, onSaveResource }: ChatPanelProps) =>
 
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4 max-w-3xl mx-auto">
-          {messages.map((message) => (
+          {messages.map((message, index) => (
             <div
               key={message.id}
               className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
@@ -202,6 +281,15 @@ export const ChatPanel = ({ savedResources, onSaveResource }: ChatPanelProps) =>
               </div>
             </div>
           ))}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="max-w-[80%] rounded-lg p-4 bg-chat-assistant text-foreground border border-border flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Thinking...</span>
+              </div>
+            </div>
+          )}
+          <div ref={scrollRef} />
         </div>
       </ScrollArea>
 
@@ -227,8 +315,12 @@ export const ChatPanel = ({ savedResources, onSaveResource }: ChatPanelProps) =>
             placeholder="Ask for help..."
             className="flex-1"
           />
-          <Button onClick={handleSend} size="icon">
-            <Send className="h-4 w-4" />
+          <Button onClick={handleSend} size="icon" disabled={isLoading || !input.trim()}>
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>
