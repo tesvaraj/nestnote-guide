@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SourcesPanel, SavedResource } from "@/components/SourcesPanel";
-import { ChatPanel } from "@/components/ChatPanel";
-import { CardsPanel } from "@/components/CardsPanel";
+import { SourcesPanel } from "@/features/resources/components/SourcesPanel";
+import { ChatPanel } from "@/features/chat/components/ChatPanel";
+import { CardsPanel } from "@/features/resources/components/CardsPanel";
+import { SavedResource } from "@/features/resources/types";
 
 const Index = () => {
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
@@ -55,7 +56,10 @@ const Index = () => {
             ${leftPanelOpen ? "block" : "hidden lg:block lg:w-0"}
           `}
         >
-          <SourcesPanel savedResources={savedResources} />
+          <SourcesPanel 
+            savedResources={savedResources}
+            onRemoveResource={(id) => setSavedResources(prev => prev.filter(r => r.id !== id))}
+          />
         </div>
 
         {/* Middle Panel - Chat */}

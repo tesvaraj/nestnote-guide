@@ -1,3 +1,9 @@
+// 🤖 AGENT: Main chat interface component
+// Handles AI conversation with streaming responses from Gemini
+// FRONTEND devs: UI and user interactions
+// AGENT devs: Integration with edge function, message handling
+// BACKEND devs: Edge function at supabase/functions/chat/index.ts
+
 import { useState, useRef, useEffect } from "react";
 import { Send, Sparkles, Bookmark, MapPin, Phone, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -5,20 +11,9 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { SavedResource } from "@/components/SourcesPanel";
 import { useToast } from "@/components/ui/use-toast";
-
-interface Recommendation extends SavedResource {
-  matchReason: string;
-}
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  citations?: { id: string; page: number; text: string }[];
-  recommendations?: Recommendation[];
-}
+import { SavedResource } from "@/features/resources/types";
+import { Message, Recommendation } from "@/features/chat/types";
 
 const quickReplies = [
   "Find bed",
@@ -77,6 +72,7 @@ export const ChatPanel = ({ savedResources, onSaveResource }: ChatPanelProps) =>
     setIsLoading(true);
 
     try {
+      // 🗄️ BACKEND: This calls the edge function at supabase/functions/chat/index.ts
       const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
       
       const resp = await fetch(CHAT_URL, {
@@ -131,6 +127,7 @@ export const ChatPanel = ({ savedResources, onSaveResource }: ChatPanelProps) =>
         content: "",
       }]);
 
+      // 🤖 AGENT: Stream processing - handles token-by-token AI responses
       while (!streamDone) {
         const { done, value } = await reader.read();
         if (done) break;
