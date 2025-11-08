@@ -12,15 +12,22 @@ serve(async (req) => {
 
   try {
     const { messages } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    if (!GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is not configured");
     }
 
     console.log("Chat request received with", messages.length, "messages");
 
-    const systemPrompt = `You are a helpful and empathetic housing assistant for NestNote, a platform that helps people experiencing homelessness find resources and support.
+    // Build conversation history in Gemini format
+    const contents = messages.map((msg: any) => ({
+      role: msg.role === "assistant" ? "model" : "user",
+      parts: [{ text: msg.content }]
+    }));
+
+    // System instruction for the agent
+    const systemInstruction = `You are a helpful and empathetic housing assistant for NestNote, a platform that helps people experiencing homelessness find resources and support.
 
 Your role:
 - Provide clear, compassionate guidance about housing resources, shelters, and support services
@@ -41,45 +48,63 @@ Current capabilities:
 - Help with understanding how to use the service
 - Emotional support and encouragement`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-        ],
-        stream: true,
-      }),
-    });
+    // Use Gemini 2.5 Flash with Google ADK approach
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${GEMINI_API_KEY}&alt=sse`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          system_instruction: {
+            parts: [{ text: systemInstruction }]
+          },
+          contents,
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+          },
+          safetySettings: [
+            {
+              category: "HARM_CATEGORY_HARASSMENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_HATE_SPEECH",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            }
+          ]
+        }),
+      }
+    );
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Gemini API error:", response.status, errorText);
+      
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limits exceeded, please try again later." }),
+          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
           {
             status: 429,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Payment required, please add funds to your Lovable AI workspace." }),
-          {
-            status: 402,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
+      
       return new Response(
-        JSON.stringify({ error: "AI gateway error" }),
+        JSON.stringify({ error: "Failed to get AI response" }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -87,7 +112,61 @@ Current capabilities:
       );
     }
 
-    return new Response(response.body, {
+    // Transform Gemini SSE stream to match our existing format
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = response.body?.getReader();
+        if (!reader) return;
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+              if (!line.trim() || line.startsWith(':')) continue;
+              
+              if (line.startsWith('data: ')) {
+                const jsonStr = line.slice(6);
+                
+                try {
+                  const data = JSON.parse(jsonStr);
+                  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                  
+                  if (text) {
+                    // Convert to OpenAI-compatible format for frontend
+                    const openAIFormat = {
+                      choices: [{
+                        delta: { content: text }
+                      }]
+                    };
+                    controller.enqueue(
+                      encoder.encode(`data: ${JSON.stringify(openAIFormat)}\n\n`)
+                    );
+                  }
+                } catch (e) {
+                  console.error('Failed to parse SSE data:', e);
+                }
+              }
+            }
+          }
+          
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        } catch (error) {
+          console.error('Stream error:', error);
+          controller.error(error);
+        }
+      }
+    });
+
+    return new Response(stream, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
