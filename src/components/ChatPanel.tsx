@@ -1,15 +1,27 @@
 import { useState } from "react";
-import { Send, Sparkles } from "lucide-react";
+import { Send, Sparkles, Bookmark, MapPin, Phone, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+
+interface Recommendation {
+  id: string;
+  name: string;
+  type: string;
+  address: string;
+  phone?: string;
+  hours?: string;
+  matchReason: string;
+}
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   citations?: { id: string; page: number; text: string }[];
+  recommendations?: Recommendation[];
 }
 
 const quickReplies = [
@@ -25,11 +37,46 @@ const mockMessages: Message[] = [
     role: "assistant",
     content: "Hi! I'm here to help you find the support you need. What can I help you with today?",
   },
+  {
+    id: "2",
+    role: "user",
+    content: "Find me a bed that I can get housing within one to two week time",
+  },
+  {
+    id: "3",
+    role: "assistant",
+    content: "I found some emergency housing options that can help you within 1-2 weeks. Here are my top recommendations:",
+    recommendations: [
+      {
+        id: "rec-1",
+        name: "Youth Emergency Shelter",
+        type: "Emergency Housing",
+        address: "123 Main St",
+        phone: "(555) 123-4567",
+        hours: "24/7 intake",
+        matchReason: "Immediate placement available for ages 12-24"
+      },
+      {
+        id: "rec-2",
+        name: "Safe Haven Transitional Housing",
+        type: "Transitional Housing",
+        address: "789 Elm St",
+        phone: "(555) 345-6789",
+        hours: "Mon-Fri 9am-6pm",
+        matchReason: "1-2 week wait list, up to 6 month stay"
+      }
+    ]
+  },
 ];
 
 export const ChatPanel = () => {
   const [messages, setMessages] = useState<Message[]>(mockMessages);
   const [input, setInput] = useState("");
+  const [savedResources, setSavedResources] = useState<Set<string>>(new Set());
+
+  const handleSaveResource = (resourceId: string) => {
+    setSavedResources(prev => new Set(prev).add(resourceId));
+  };
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -87,6 +134,53 @@ export const ChatPanel = () => {
                 }`}
               >
                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                
+                {message.recommendations && message.recommendations.length > 0 && (
+                  <div className="mt-4 space-y-3">
+                    {message.recommendations.map((rec) => (
+                      <Card key={rec.id} className="p-3 bg-secondary/30">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-sm text-foreground">{rec.name}</h4>
+                            <Badge variant="secondary" className="text-xs mt-1">{rec.type}</Badge>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant={savedResources.has(rec.id) ? "secondary" : "default"}
+                            onClick={() => handleSaveResource(rec.id)}
+                            className="shrink-0"
+                            disabled={savedResources.has(rec.id)}
+                          >
+                            <Bookmark className="h-3.5 w-3.5 mr-1" />
+                            {savedResources.has(rec.id) ? "Saved" : "Save"}
+                          </Button>
+                        </div>
+                        <div className="space-y-1.5 text-xs">
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                            <span className="text-foreground">{rec.address}</span>
+                          </div>
+                          {rec.phone && (
+                            <div className="flex items-start gap-2">
+                              <Phone className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                              <span className="text-foreground">{rec.phone}</span>
+                            </div>
+                          )}
+                          {rec.hours && (
+                            <div className="flex items-start gap-2">
+                              <Clock className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                              <span className="text-foreground">{rec.hours}</span>
+                            </div>
+                          )}
+                          <div className="mt-2 pt-2 border-t border-border">
+                            <p className="text-muted-foreground italic">{rec.matchReason}</p>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+
                 {message.citations && message.citations.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-border/50 flex flex-wrap gap-1">
                     {message.citations.map((citation) => (

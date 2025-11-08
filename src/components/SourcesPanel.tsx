@@ -1,80 +1,119 @@
-import { FileText, ChevronDown, ChevronUp } from "lucide-react";
+import { Bookmark, MapPin, Phone, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 
-interface Source {
+interface SavedResource {
   id: string;
-  title: string;
+  name: string;
   type: string;
-  chunks: number;
+  address: string;
+  phone?: string;
+  hours?: string;
+  notes?: string;
 }
 
-const mockSources: Source[] = [
-  { id: "1", title: "Youth Services Guide", type: "PDF", chunks: 12 },
-  { id: "2", title: "Emergency Housing Info", type: "Document", chunks: 8 },
-  { id: "3", title: "School Resources", type: "PDF", chunks: 15 },
-  { id: "4", title: "Food Bank Locations", type: "Document", chunks: 6 },
-  { id: "5", title: "Transportation Help", type: "PDF", chunks: 10 },
+const mockSavedResources: SavedResource[] = [
+  { 
+    id: "1", 
+    name: "Youth Emergency Shelter", 
+    type: "Housing", 
+    address: "123 Main St",
+    phone: "(555) 123-4567",
+    hours: "24/7 intake",
+    notes: "Ages 12-24, immediate placement available"
+  },
+  { 
+    id: "2", 
+    name: "Community Food Bank", 
+    type: "Food", 
+    address: "456 Oak Ave",
+    phone: "(555) 234-5678",
+    hours: "Mon-Fri 9am-5pm"
+  },
 ];
 
 export const SourcesPanel = () => {
-  const [expandedSource, setExpandedSource] = useState<string | null>(null);
+  const [expandedResource, setExpandedResource] = useState<string | null>(null);
 
   return (
     <div className="h-full flex flex-col bg-background border-r border-panel-border">
       <div className="p-4 border-b border-panel-border">
-        <h2 className="text-lg font-semibold text-foreground">Sources</h2>
+        <div className="flex items-center gap-2">
+          <Bookmark className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold text-foreground">Saved Resources</h2>
+        </div>
         <p className="text-sm text-muted-foreground mt-1">
-          {mockSources.length} documents loaded
+          {mockSavedResources.length} saved from chat
         </p>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="p-3 space-y-2">
-          {mockSources.map((source) => (
-            <Card
-              key={source.id}
-              className="p-3 hover:bg-secondary/50 transition-colors cursor-pointer"
-              onClick={() =>
-                setExpandedSource(expandedSource === source.id ? null : source.id)
-              }
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-2 flex-1">
-                  <FileText className="h-4 w-4 mt-0.5 text-primary" />
+          {mockSavedResources.length === 0 ? (
+            <div className="text-center py-8 px-4">
+              <Bookmark className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">
+                No saved resources yet. Start chatting to get recommendations!
+              </p>
+            </div>
+          ) : (
+            mockSavedResources.map((resource) => (
+              <Card
+                key={resource.id}
+                className="p-3 hover:bg-secondary/50 transition-colors cursor-pointer"
+                onClick={() =>
+                  setExpandedResource(expandedResource === resource.id ? null : resource.id)
+                }
+              >
+                <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-foreground truncate">
-                      {source.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {source.type} • {source.chunks} chunks
-                    </p>
+                    <div className="flex items-start gap-2 mb-1">
+                      <p className="font-medium text-sm text-foreground">
+                        {resource.name}
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {resource.type}
+                    </Badge>
                   </div>
+                  {expandedResource === resource.id ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground ml-2" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground ml-2" />
+                  )}
                 </div>
-                {expandedSource === source.id ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                )}
-              </div>
 
-              {expandedSource === source.id && (
-                <div className="mt-3 pt-3 border-t border-border space-y-2">
-                  <div className="text-xs bg-muted/50 p-2 rounded">
-                    <span className="text-muted-foreground">Sample chunk:</span>
-                    <p className="mt-1 text-foreground">
-                      "Emergency housing services are available 24/7 for youth ages 12-24..."
-                    </p>
+                {expandedResource === resource.id && (
+                  <div className="mt-3 pt-3 border-t border-border space-y-2 text-xs">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-3.5 w-3.5 text-muted-foreground mt-0.5" />
+                      <span className="text-foreground">{resource.address}</span>
+                    </div>
+                    {resource.phone && (
+                      <div className="flex items-start gap-2">
+                        <Phone className="h-3.5 w-3.5 text-muted-foreground mt-0.5" />
+                        <span className="text-foreground">{resource.phone}</span>
+                      </div>
+                    )}
+                    {resource.hours && (
+                      <div className="flex items-start gap-2">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground mt-0.5" />
+                        <span className="text-foreground">{resource.hours}</span>
+                      </div>
+                    )}
+                    {resource.notes && (
+                      <div className="mt-2 pt-2 border-t border-border">
+                        <p className="text-muted-foreground italic">{resource.notes}</p>
+                      </div>
+                    )}
                   </div>
-                  <Button variant="ghost" size="sm" className="w-full text-xs">
-                    View all chunks
-                  </Button>
-                </div>
-              )}
-            </Card>
-          ))}
+                )}
+              </Card>
+            ))
+          )}
         </div>
       </ScrollArea>
     </div>

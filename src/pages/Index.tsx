@@ -77,7 +77,7 @@ const Index = () => {
           }}
           className="flex-1"
         >
-          Sources
+          Saved
         </Button>
         <Button
           variant="secondary"
