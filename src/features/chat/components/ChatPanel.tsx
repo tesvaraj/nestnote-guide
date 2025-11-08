@@ -151,6 +151,8 @@ export const ChatPanel = ({ savedResources, onSaveResource }: ChatPanelProps) =>
           try {
             const parsed = JSON.parse(jsonStr);
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            const recs = parsed.choices?.[0]?.delta?.recommendations as Recommendation[] | undefined;
+            
             if (content) {
               assistantContent += content;
               setMessages(prev => {
@@ -158,6 +160,17 @@ export const ChatPanel = ({ savedResources, onSaveResource }: ChatPanelProps) =>
                 const lastMsg = newMessages[newMessages.length - 1];
                 if (lastMsg?.role === "assistant") {
                   lastMsg.content = assistantContent;
+                }
+                return newMessages;
+              });
+            }
+
+            if (recs) {
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === "assistant") {
+                  lastMsg.recommendations = recs;
                 }
                 return newMessages;
               });
