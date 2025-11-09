@@ -19,13 +19,24 @@ app = Flask(__name__)
 
 # Load resources data
 RESOURCES_FILE = "resources-data.json"
+RESOURCES_DATA = []
 
 def load_resources() -> List[Dict]:
     """Load resources from JSON file"""
-    with open(RESOURCES_FILE, 'r') as f:
-        return json.load(f)
+    global RESOURCES_DATA
+    try:
+        with open(RESOURCES_FILE, 'r') as f:
+            RESOURCES_DATA = json.load(f)
+            print(f"✅ Loaded {len(RESOURCES_DATA)} service categories from JSON")
+    except FileNotFoundError:
+        print(f"⚠️ Warning: {RESOURCES_FILE} not found. Resource search will return empty results.")
+        RESOURCES_DATA = []
+    except Exception as e:
+        print(f"❌ Error loading resources: {e}")
+        RESOURCES_DATA = []
 
-RESOURCES_DATA = load_resources()
+# Try to load resources at startup
+load_resources()
 
 # Custom Tool: Search Local Resources
 def search_local_resources(service_category: str, user_filters: Dict[str, bool] = None) -> List[Dict]:
@@ -112,27 +123,27 @@ def get_resource_details(resource_uuid: str) -> Dict:
                 }
     return {}
 
-# Define agent tools using google-genai SDK format
+# Define agent tools using google-genai SDK format (use types.Type enum)
 search_resources_tool = types.Tool(
     function_declarations=[
         types.FunctionDeclaration(
             name='search_local_resources',
             description='Search the local Sacramento resources database for shelters, food services, and support organizations',
             parameters=types.Schema(
-                type="OBJECT",
+                type=types.Type.OBJECT,
                 properties={
                     'service_category': types.Schema(
-                        type="STRING",
+                        type=types.Type.STRING,
                         description='Service category: "Homeless Youth Shelters" or "Soup Kitchens"'
                     ),
                     'user_filters': types.Schema(
-                        type="OBJECT",
+                        type=types.Type.OBJECT,
                         description='Demographic and accessibility filters',
                         properties={
-                            'services_youth': types.Schema(type="BOOLEAN"),
-                            'services_families': types.Schema(type="BOOLEAN"),
-                            'services_lgbtq': types.Schema(type="BOOLEAN"),
-                            'wheelchair_accessible': types.Schema(type="BOOLEAN"),
+                            'services_youth': types.Schema(type=types.Type.BOOLEAN),
+                            'services_families': types.Schema(type=types.Type.BOOLEAN),
+                            'services_lgbtq': types.Schema(type=types.Type.BOOLEAN),
+                            'wheelchair_accessible': types.Schema(type=types.Type.BOOLEAN),
                         }
                     )
                 },
@@ -143,10 +154,10 @@ search_resources_tool = types.Tool(
             name='get_resource_details',
             description='Get detailed information about a specific resource organization',
             parameters=types.Schema(
-                type="OBJECT",
+                type=types.Type.OBJECT,
                 properties={
                     'resource_uuid': types.Schema(
-                        type="STRING",
+                        type=types.Type.STRING,
                         description='UUID of the organization'
                     )
                 },
@@ -272,10 +283,27 @@ def query():
     except Exception as e:
         return {'error': str(e)}, 500
 
+@app.route('/', methods=['GET'])
+def index():
+    """Root endpoint"""
+    return {
+        'service': 'FindHaven ADK Agent',
+        'status': 'running',
+        'endpoints': {
+            '/health': 'Health check',
+            '/query': 'POST - Chat query endpoint'
+        },
+        'resources_loaded': len(RESOURCES_DATA) > 0
+    }
+
 @app.route('/health', methods=['GET'])
 def health():
     """Health check endpoint"""
-    return {'status': 'healthy', 'service': 'FindHaven ADK Agent'}
+    return {
+        'status': 'healthy',
+        'service': 'FindHaven ADK Agent',
+        'resources_loaded': len(RESOURCES_DATA)
+    }
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
