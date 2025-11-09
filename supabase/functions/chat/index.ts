@@ -48,10 +48,16 @@ serve(async (req) => {
       parts: [{ text: msg.content }]
     }));
 
+    // Calculate total organizations across all service categories
+    const totalOrgs = resourcesData.reduce((sum, category) => sum + category.organizations.length, 0);
+
     // System instruction for the agent
-    const systemInstruction = `You are a warm, empathetic housing assistant for NestNote, a platform that helps people experiencing homelessness find resources and support.
+    const systemInstruction = `You are a warm, empathetic housing assistant for FindHaven, a platform that helps people experiencing homelessness find resources and support in Sacramento, CA.
 
 CRITICAL: You MUST ALWAYS respond with conversational text. Never just call tools without talking to the user.
+
+Available Resource Categories:
+${resourcesData.map(cat => `- ${cat.service_name} (${cat.organizations.length} organizations)`).join('\n')}
 
 Your conversational approach:
 - ALWAYS start with a warm, empathetic response acknowledging what they asked for
@@ -66,25 +72,30 @@ When to show recommendations:
 - Always explain WHY you're showing these specific resources based on their request
 
 Example flow:
-User: "Find bed"
-You: "I'd be happy to help you find a bed tonight. Let me show you some available options. [CALL TOOL] I've shared a few shelters that currently have beds available. Are you looking for yourself, or do you have family with you? This will help me narrow down the best options for your specific situation."
+User: "I need food"
+You: "I'd be happy to help you find meal services. Let me show you some options nearby. [CALL TOOL] I've shared some places that serve meals in Sacramento. Do you need meals today, or are you looking for ongoing support? Also, are there any dietary restrictions I should know about?"
 
 Your role:
-- Provide clear, compassionate guidance about housing resources, shelters, and support services
+- Provide clear, compassionate guidance about housing, food, and support services
 - Help users understand their options based on their profile and situation
-- Use the provide_resource_recommendations tool when they ask about beds, shelters, housing, food, transport, or say find/need/plan
+- Use the provide_resource_recommendations tool when they ask about:
+  * Youth shelters (for homeless youth ages 12-17)
+  * Food/meals (soup kitchens, meal programs, food assistance)
+  * Keywords like 'find', 'need', 'show', 'help', 'looking for'
+- Match users with the RIGHT category based on their needs:
+  * Youth/runaway/teen shelter → Homeless Youth Shelters
+  * Food/meals/hungry/kitchen → Soup Kitchens
 - When showing recommendations, explain WHY each resource might be a good fit
 - Always combine tool calls with conversational responses - never just call a tool silently
-- If users ask for more details about amenities, services, or specific features, use the provide_detailed_resource_info tool
-- Answer questions about available beds, locations, and how to access services
+- If users ask for more details about specific resources, use the provide_detailed_resource_info tool
 - Be supportive and encouraging while maintaining professionalism
 
 Context:
 - Users may be in vulnerable situations - always be respectful, patient, and supportive
 - Focus on actionable information and next steps
 - Keep responses warm and conversational, not clinical
-- The platform has resources including shelters, beds, and support services
-- You have access to a database of ${resourcesData.length} resources with detailed information
+- You have access to ${totalOrgs} organizations across ${resourcesData.length} service categories in Sacramento
+- Resources have demographic filters (youth, families, LGBTQ+, veterans, wheelchair accessible, pets)
 
 Remember: You're not just providing information - you're supporting someone through a difficult time. Be warm, be conversational, and show you care through your words WHILE providing helpful recommendations.`;
 
@@ -93,30 +104,47 @@ Remember: You're not just providing information - you're supporting someone thro
       function_declarations: [
         {
           name: "provide_resource_recommendations",
-          description: "Call this to show 3 shelter/housing recommendations when user asks about beds, shelters, housing, food, transport, school, or uses keywords like 'find', 'need', 'show plan'. IMPORTANT: Always provide conversational text response along with calling this tool - never call it silently.",
+          description: "Search and recommend organizations from the resource database based on user needs. Use when user asks about youth shelters, food/meals, or any specific service category. IMPORTANT: Always provide conversational text response along with calling this tool - never call it silently.",
           parameters: {
             type: "OBJECT",
             properties: {
-              query: {
+              service_category: {
                 type: "STRING",
-                description: "The user's search query or needs (e.g., 'family shelter', 'emergency bed', 'veterans housing')"
+                description: "The service category to search. Options: 'Homeless Youth Shelters' for youth/teen shelter needs, 'Soup Kitchens' for food/meal needs. Map user's request to the appropriate category.",
+                enum: ["Homeless Youth Shelters", "Soup Kitchens"]
+              },
+              user_filters: {
+                type: "OBJECT",
+                description: "Demographic and accessibility filters based on user's situation",
+                properties: {
+                  services_male: { type: "BOOLEAN", description: "Serves males" },
+                  services_female: { type: "BOOLEAN", description: "Serves females" },
+                  services_gender_neutral: { type: "BOOLEAN", description: "Serves all genders" },
+                  services_families: { type: "BOOLEAN", description: "Serves families with children" },
+                  services_youth: { type: "BOOLEAN", description: "Serves youth/teens (12-17)" },
+                  services_seniors: { type: "BOOLEAN", description: "Serves seniors" },
+                  services_veterans: { type: "BOOLEAN", description: "Serves veterans" },
+                  services_lgbtq: { type: "BOOLEAN", description: "LGBTQ+ friendly" },
+                  services_pets_allowed: { type: "BOOLEAN", description: "Allows pets" },
+                  wheelchair_accessible: { type: "BOOLEAN", description: "Wheelchair accessible" }
+                }
               }
             },
-            required: ["query"]
+            required: ["service_category"]
           }
         },
         {
           name: "provide_detailed_resource_info",
-          description: "Provide detailed information about specific resources including amenities, services, accessibility. Use when user asks for more details, amenities, or specific features. Always accompany with conversational text.",
+          description: "Provide detailed information about a specific resource organization including all services, contact info, and accessibility features. Use when user asks for more details about a specific organization. Always accompany with conversational text.",
           parameters: {
             type: "OBJECT",
             properties: {
-              resource_name: {
+              resource_uuid: {
                 type: "STRING",
-                description: "Name of the resource to get details about"
+                description: "UUID of the specific organization to get details about"
               }
             },
-            required: ["resource_name"]
+            required: ["resource_uuid"]
           }
         }
       ]
@@ -247,21 +275,96 @@ Remember: You're not just providing information - you're supporting someone thro
           if (toolCalls.length > 0) {
             for (const toolCall of toolCalls) {
               if (toolCall.name === "provide_resource_recommendations") {
-                // Get 3 random resources with basic info only
-                const shuffled = [...resourcesData].sort(() => 0.5 - Math.random());
-                const selectedResources = shuffled.slice(0, 3);
+                const serviceCategory = toolCall.args?.service_category;
+                const userFilters = toolCall.args?.user_filters || {};
                 
-                const recommendations = selectedResources.map(r => ({
-                  id: r.id,
-                  name: r.name,
-                  type: r.resource_type,
-                  address: r.address,
-                  phone: r.phone || "Call 2-1-1 for info",
-                  hours: r.hours_of_operation || "Contact for hours",
-                  matchReason: `${r.resource_type} with ${r.total_beds || 'multiple'} beds available`
+                console.log("Tool call args:", { serviceCategory, userFilters });
+                
+                // Find the matching service category
+                const category = resourcesData.find(cat => cat.service_name === serviceCategory);
+                
+                if (!category) {
+                  console.error("Category not found:", serviceCategory);
+                  continue;
+                }
+                
+                // Filter organizations based on user criteria
+                let matchedOrgs = category.organizations;
+                
+                // Apply filters if provided
+                if (Object.keys(userFilters).length > 0) {
+                  matchedOrgs = matchedOrgs.filter(org => {
+                    let matches = true;
+                    
+                    // For each filter, check if org meets the criteria
+                    for (const [key, value] of Object.entries(userFilters)) {
+                      if (value === true && org[key as keyof typeof org] !== true) {
+                        matches = false;
+                        break;
+                      }
+                    }
+                    
+                    return matches;
+                  });
+                }
+                
+                // Score and rank by number of matching services
+                const scoredOrgs = matchedOrgs.map(org => {
+                  let score = 0;
+                  const matchedServices: string[] = [];
+                  
+                  // Count matching demographics
+                  if (userFilters.services_youth && org.services_youth) {
+                    score += 2;
+                    matchedServices.push("youth");
+                  }
+                  if (userFilters.services_families && org.services_families) {
+                    score += 2;
+                    matchedServices.push("families");
+                  }
+                  if (userFilters.services_lgbtq && org.services_lgbtq) {
+                    score += 2;
+                    matchedServices.push("LGBTQ+ friendly");
+                  }
+                  if (userFilters.services_veterans && org.services_veterans) {
+                    score += 2;
+                    matchedServices.push("veterans");
+                  }
+                  if (userFilters.wheelchair_accessible && org.wheelchair_accessible) {
+                    score += 1;
+                    matchedServices.push("wheelchair accessible");
+                  }
+                  if (userFilters.services_pets_allowed && org.services_pets_allowed) {
+                    score += 1;
+                    matchedServices.push("pets allowed");
+                  }
+                  
+                  // Bonus points for having contact info
+                  if (org.phone) score += 0.5;
+                  if (org.address) score += 0.5;
+                  if (org.website) score += 0.5;
+                  
+                  return { org, score, matchedServices };
+                });
+                
+                // Sort by score and take top 3-5
+                const topMatches = scoredOrgs
+                  .sort((a, b) => b.score - a.score)
+                  .slice(0, matchedOrgs.length < 5 ? 3 : 5);
+                
+                const recommendations = topMatches.map(({ org, matchedServices }) => ({
+                  id: org.uuid,
+                  name: org.organization,
+                  type: category.service_name,
+                  address: org.address || "Address not listed - please call for location",
+                  phone: org.phone || "Call 2-1-1 for contact info",
+                  hours: org.hours_of_operation || "Contact for hours",
+                  matchReason: matchedServices.length > 0 
+                    ? `Serves ${matchedServices.join(", ")}` 
+                    : `${category.service_name} in Sacramento area`
                 }));
                 
-                console.log("Sending basic recommendations:", recommendations);
+                console.log(`Sending ${recommendations.length} recommendations for ${serviceCategory}`);
                 
                 const recFormat = {
                   choices: [{
@@ -274,40 +377,58 @@ Remember: You're not just providing information - you're supporting someone thro
                   encoder.encode(`data: ${JSON.stringify(recFormat)}\n\n`)
                 );
               } else if (toolCall.name === "provide_detailed_resource_info") {
-                // Find the resource and send detailed info
-                const resourceName = toolCall.args?.resource_name;
-                const resource = resourcesData.find(r => 
-                  r.name.toLowerCase().includes(resourceName?.toLowerCase() || "")
-                );
+                const resourceUuid = toolCall.args?.resource_uuid;
                 
-                if (resource) {
+                // Find the organization across all categories
+                let foundOrg = null;
+                let foundCategory = null;
+                
+                for (const category of resourcesData) {
+                  const org = category.organizations.find(o => o.uuid === resourceUuid);
+                  if (org) {
+                    foundOrg = org;
+                    foundCategory = category.service_name;
+                    break;
+                  }
+                }
+                
+                if (foundOrg) {
+                  const services = [];
+                  if (foundOrg.services_male) services.push("✓ Men");
+                  if (foundOrg.services_female) services.push("✓ Women");
+                  if (foundOrg.services_gender_neutral) services.push("✓ All genders");
+                  if (foundOrg.services_families) services.push("✓ Families with children");
+                  if (foundOrg.services_youth) services.push("✓ Youth (ages 12-17)");
+                  if (foundOrg.services_seniors) services.push("✓ Seniors");
+                  if (foundOrg.services_veterans) services.push("✓ Veterans");
+                  if (foundOrg.services_lgbtq) services.push("✓ LGBTQ+ friendly");
+                  if (foundOrg.services_pets_allowed === true) services.push("✓ Pets allowed");
+                  if (foundOrg.services_pets_allowed === false) services.push("✗ No pets");
+                  
                   const detailedInfo = `
-**Full Details for ${resource.name}:**
+**Full Details for ${foundOrg.organization}:**
 
-📍 **Location:** ${resource.address}
-📞 **Phone:** ${resource.phone || "Call 2-1-1"}
-⏰ **Hours:** ${resource.hours_of_operation}
+📍 **Location:** ${foundOrg.address || "Address not listed - please call"}
+📞 **Phone:** ${foundOrg.phone || "Call 2-1-1"}
+📧 **Email:** ${foundOrg.email || "Not listed"}
+🌐 **Website:** ${foundOrg.website || "Not listed"}
+⏰ **Hours:** ${foundOrg.hours_of_operation || "Contact for hours"}
 
-**Resource Type:** ${resource.resource_type}
-**Total Beds:** ${resource.total_beds || "Contact for availability"}
+**Service Category:** ${foundCategory}
+${"total_beds" in foundOrg && foundOrg.total_beds ? `**Total Beds:** ${foundOrg.total_beds}` : ""}
+${"available_beds" in foundOrg && foundOrg.available_beds ? `**Available Beds:** ${foundOrg.available_beds}` : ""}
 
-**Services Available:**
-${resource.services_families ? "✓ Families" : ""}
-${resource.services_male ? "✓ Men" : ""}
-${resource.services_female ? "✓ Women" : ""}
-${resource.services_youth ? "✓ Youth" : ""}
-${resource.services_seniors ? "✓ Seniors" : ""}
-${resource.services_veterans ? "✓ Veterans" : ""}
-${resource.services_lgbtq ? "✓ LGBTQ+" : ""}
-${resource.services_pets_allowed ? "✓ Pets Allowed" : "✗ No Pets"}
+**Who They Serve:**
+${services.join("\n")}
 
-**Amenities:**
-${resource.amenities?.map((a: string) => `• ${a}`).join("\n") || "Contact for details"}
+**Accessibility:**
+${foundOrg.wheelchair_accessible ? "♿ Wheelchair accessible" : "Wheelchair accessibility not confirmed"}
 
-**Intake Instructions:**
-${resource.intake_instructions || "Contact directly for intake process"}
+**Description:**
+${foundOrg.description}
 
-${resource.wheelchair_accessible ? "♿ Wheelchair Accessible" : ""}
+**More Information:**
+${foundOrg.detail_page}
 `;
                   
                   const detailFormat = {
