@@ -2,6 +2,27 @@
 
 Google Agent Development Kit (ADK) agent for FindHaven's chat system. Helps people experiencing homelessness find resources and support in Sacramento, CA.
 
+## Quick Testing
+
+After deployment, test your service:
+
+```bash
+# Get service URL
+SERVICE_URL=$(gcloud run services describe findhaven-adk-agent \
+  --platform managed --region us-central1 --format 'value(status.url)')
+
+# Run automated tests
+./test_service.sh $SERVICE_URL
+
+# Or test manually
+curl $SERVICE_URL/health | jq
+curl -X POST $SERVICE_URL/query \
+  -H "Content-Type: application/json" \
+  -d '{"message": "I need food", "stream": false}' | jq
+```
+
+See [Testing section](#testing) below for detailed testing instructions.
+
 ## Overview
 
 This agent uses Google ADK framework to provide an intelligent chat assistant that can:
@@ -91,8 +112,12 @@ gcloud run deploy findhaven-adk-agent \
   --cpu 1 \
   --timeout 300 \
   --max-instances 10 \
-  --min-instances 0
+  --min-instances 0 \
+  --cpu-boost \
+  --clear-base-image
 ```
+
+**Important:** Use `--memory 1Gi` (not 512Mi) to avoid memory issues. The `--cpu-boost` helps with faster startup and better performance.
 
 4. **Get the service URL:**
 ```bash
@@ -119,7 +144,16 @@ docker run -p 8080:8080 \
 
 ## Integration with Supabase
 
-### Step 1: Set Supabase Secret
+### Step 1: Get Your Service URL
+
+```bash
+gcloud run services describe findhaven-adk-agent \
+  --platform managed \
+  --region us-central1 \
+  --format 'value(status.url)'
+```
+
+### Step 2: Set Supabase Secret
 
 1. Go to your Supabase project dashboard
 2. Navigate to **Settings** → **Secrets**
@@ -127,18 +161,31 @@ docker run -p 8080:8080 \
    - **Name**: `ADK_SERVICE_URL`
    - **Value**: Your deployed Cloud Run URL (e.g., `https://findhaven-adk-agent-xxxxx.a.run.app`)
 
-### Step 2: Verify Integration
+### Step 3: Verify Integration
 
 The Supabase edge function will automatically use the ADK service if `ADK_SERVICE_URL` is set. To verify:
 
-1. Check Supabase function logs
-2. You should see: `Using ADK agent service: https://...`
+1. **Check Supabase function logs:**
+   ```bash
+   # In Supabase dashboard, go to Logs and look for:
+   # "Using ADK agent service: https://..."
+   ```
 
-### Step 3: Test End-to-End
+2. **Test from your frontend:**
+   - Send a message through your chat UI
+   - The request should flow: Frontend → Supabase → ADK Service → Gemini API
 
-1. Send a message through your frontend chat
-2. The request should flow: Frontend → Supabase → ADK Service → Gemini API
-3. Check logs in both Supabase and Cloud Run to verify
+3. **Check Cloud Run logs:**
+   ```bash
+   gcloud run logs tail findhaven-adk-agent --region us-central1
+   ```
+
+### Step 4: Test End-to-End
+
+1. **Send a test message** through your frontend chat UI
+2. **Check Supabase logs** - should show "Using ADK agent service"
+3. **Check Cloud Run logs** - should show the incoming request and response
+4. **Verify the response** includes recommendations or helpful information
 
 ## API Endpoints
 
@@ -179,28 +226,127 @@ Response format (streaming):
 
 ## Testing
 
-### Test Health Endpoint
+### Get Your Service URL
+
+First, get your deployed service URL:
 ```bash
+gcloud run services describe findhaven-adk-agent \
+  --platform managed \
+  --region us-central1 \
+  --format 'value(status.url)'
+```
+
+### Quick Test Script
+
+Use the automated test script:
+```bash
+# Test with auto-detected URL
+./test_service.sh
+
+# Or specify URL directly
+./test_service.sh https://your-service-url.run.app
+```
+
+### Manual Testing
+
+#### 1. Test Health Endpoint
+```bash
+curl https://your-service-url/health | jq
+```
+
+Expected response:
+```json
+{
+  "status": "healthy",
+  "service": "FindHaven ADK Agent",
+  "agent_loaded": true,
+  "resources_loaded": true,
+  "resource_categories": 2,
+  "api_key_configured": true
+}
+```
+
+#### 2. Test Query Endpoint (Non-streaming)
+```bash
+curl -X POST https://your-service-url/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "I need food assistance",
+    "stream": false
+  }' | jq
+```
+
+#### 3. Test Query Endpoint (Streaming)
+```bash
+curl -N -X POST https://your-service-url/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "I need a youth shelter",
+    "stream": true
+  }'
+```
+
+#### 4. Test with Messages Array
+```bash
+curl -X POST https://your-service-url/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {"role": "user", "content": "I need food"},
+      {"role": "assistant", "content": "I can help you find food resources."},
+      {"role": "user", "content": "Show me soup kitchens"}
+    ],
+    "stream": false
+  }' | jq
+```
+
+### Python Test Script
+
+For more detailed testing with streaming:
+```bash
+# Install requests if needed
+pip install requests
+
+# Run the test script
+python test_streaming.py https://your-service-url
+```
+
+### Test Resource Search
+
+Test that the agent can search for resources:
+```bash
+curl -X POST https://your-service-url/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "I need to find a youth shelter for a 15-year-old",
+    "stream": false
+  }' | jq
+```
+
+You should see recommendations in the response if the agent is working correctly.
+
+### Test Resource Details
+
+Test getting detailed resource information:
+```bash
+curl -X POST https://your-service-url/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Tell me more about resource 3032a77e-bfe0-4767-8a6f-f5d4e42b22f1",
+    "stream": false
+  }' | jq
+```
+
+### Local Testing
+
+For local testing:
+```bash
+# Start the service locally
+python main.py
+
+# In another terminal, test it
 curl http://localhost:8080/health
-```
-
-### Test Query Endpoint (Non-streaming)
-```bash
-curl -X POST http://localhost:8080/query \
-  -H "Content-Type: application/json" \
-  -d '{"message": "I need food", "stream": false}'
-```
-
-### Test Query Endpoint (Streaming)
-```bash
-curl -X POST http://localhost:8080/query \
-  -H "Content-Type: application/json" \
-  -d '{"message": "I need a youth shelter", "stream": true}'
-```
-
-### Run Test Script
-```bash
-./test_local.sh
+./test_service.sh http://localhost:8080
 ```
 
 ## Monitoring

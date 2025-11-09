@@ -3,23 +3,45 @@ HTTP service wrapper for the ADK agent.
 This service provides an HTTP API that can be called from the Supabase edge function.
 """
 import os
+import sys
 import json
+import traceback
+
+# Ensure we can import from current directory
+sys.path.insert(0, os.path.dirname(__file__))
+
 from flask import Flask, request, Response, jsonify
 from flask_cors import CORS
-from google import genai
-from google.genai import types
 
 # Import agent components with error handling
+AGENT_LOADED = False
+root_agent = None
+search_local_resources = None
+get_resource_details = None
+get_resources_data = None
+get_resources_count = None
+
+try:
+    from google import genai
+    from google.genai import types
+    print("✓ Google genai imported successfully")
+except Exception as e:
+    print(f"✗ Failed to import google.genai: {e}")
+    traceback.print_exc()
+    genai = None
+    types = None
+
 try:
     from agent import root_agent, get_resources_data, search_local_resources, get_resource_details
     AGENT_LOADED = True
+    print("✓ Agent imported successfully")
+    
     # Use lazy loading for resources data
     def get_resources_count():
         resources = get_resources_data()
         return len(resources) if resources else 0
 except Exception as e:
-    print(f"Warning: Failed to load agent: {e}")
-    import traceback
+    print(f"✗ Failed to load agent: {e}")
     traceback.print_exc()
     AGENT_LOADED = False
     root_agent = None
@@ -40,6 +62,15 @@ except Exception as e:
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
+# Print startup information
+print("=" * 50)
+print("FindHaven ADK Agent Service Starting")
+print("=" * 50)
+print(f"Agent loaded: {AGENT_LOADED}")
+print(f"Resources available: {get_resources_count() > 0}")
+print(f"Python version: {sys.version}")
+print("=" * 50)
+
 # Initialize Gemini client (lazy initialization to reduce memory)
 gemini_client = None
 _client_lock = None
@@ -47,6 +78,8 @@ _client_lock = None
 def get_gemini_client():
     """Get or create Gemini client (thread-safe)"""
     global gemini_client, _client_lock
+    if genai is None:
+        raise ValueError("Google genai module not available")
     if gemini_client is None:
         import threading
         if _client_lock is None:
@@ -95,6 +128,8 @@ def index():
 
 def create_adk_tools():
     """Create tool definitions from ADK agent tools"""
+    if types is None:
+        raise ValueError("Google genai types module not available")
     # Define tools using ADK's tool structure
     # The ADK agent has search_local_resources and get_resource_details as tools
     search_tool = types.Tool(
@@ -216,7 +251,11 @@ def query():
                     while iteration < max_iterations:
                         iteration += 1
                         try:
-                            model_name = root_agent.canonical_model if hasattr(root_agent, 'canonical_model') else 'gemini-2.5-flash'
+                            # Get model name as string - use the MODEL_NAME from agent module
+                            # ADK agent's canonical_model is an object, not a string, so we use MODEL_NAME directly
+                            from agent import MODEL_NAME
+                            model_name = MODEL_NAME
+                            
                             response_stream = client.models.generate_content_stream(
                                 model=model_name,
                                 contents=accumulated_contents,
@@ -362,7 +401,10 @@ def query():
         else:
             # Non-streaming mode
             try:
-                model_name = root_agent.canonical_model if hasattr(root_agent, 'canonical_model') else 'gemini-2.5-flash'
+                # Get model name as string - use the MODEL_NAME from agent module
+                from agent import MODEL_NAME
+                model_name = MODEL_NAME
+                
                 response = client.models.generate_content(
                     model=model_name,
                     contents=contents,

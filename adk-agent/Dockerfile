@@ -25,7 +25,7 @@ EXPOSE 8080
 ENV PORT=8080
 ENV PYTHONUNBUFFERED=1
 
-# Run the application with optimized worker configuration
-# Using fewer workers to reduce memory usage
-CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:8080", "--timeout", "300", "--worker-class", "sync", "--worker-connections", "1000", "--max-requests", "1000", "--max-requests-jitter", "50", "service:app"]
+# Run the application with gunicorn
+# Using fewer workers (2) to reduce memory usage
+CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:8080", "--timeout", "300", "--worker-class", "sync", "--worker-connections", "1000", "--max-requests", "1000", "--max-requests-jitter", "50", "--log-level", "info", "--access-logfile", "-", "--error-logfile", "-", "--capture-output", "service:app"]
 

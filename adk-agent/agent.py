@@ -4,8 +4,16 @@ A Google ADK agent for helping people find housing and support resources in Sacr
 """
 import json
 import os
+import warnings
 from typing import List, Dict, Any, Optional
-from google.adk.agents.llm_agent import Agent
+from google.adk import Agent
+
+# Suppress pydantic warnings
+warnings.filterwarnings("ignore", category=UserWarning, module=".*pydantic.*")
+
+# Model configuration - use string directly for Gemini API
+MODEL_NAME = 'gemini-2.5-flash'
+AGENT_NAME = 'findhaven_assistant'
 
 # Load resources data (lazy loading to reduce memory at startup)
 RESOURCES_FILE = os.path.join(os.path.dirname(__file__), "resources-data.json")
@@ -42,10 +50,13 @@ def get_resources_data() -> List[Dict]:
     return RESOURCES_DATA or []
 
 # Load resources at module import (but allow lazy loading)
+# Don't fail if resources can't be loaded - allow service to start
 try:
     load_resources()
 except Exception as e:
     print(f"Warning: Could not load resources at import: {e}")
+    import traceback
+    traceback.print_exc()
     RESOURCES_DATA = []
     _resources_loaded = True
 
@@ -281,13 +292,22 @@ Context:
 Remember: You're not just providing information - you're supporting someone through a difficult time. Be warm, be conversational, and show you care through your words WHILE providing helpful recommendations."""
 
 # Create the root agent (with lazy instruction)
-SYSTEM_INSTRUCTION = get_system_instruction()  # Initialize with current data
-
-root_agent = Agent(
-    model='gemini-2.5-flash',
-    name='findhaven_assistant',
-    description="A warm, empathetic housing assistant for FindHaven that helps people find resources and support in Sacramento, CA.",
-    instruction=SYSTEM_INSTRUCTION,
-    tools=[search_local_resources, get_resource_details],
-)
+# Wrap in try-except to prevent import failures
+try:
+    SYSTEM_INSTRUCTION = get_system_instruction()  # Initialize with current data
+    
+    root_agent = Agent(
+        model=MODEL_NAME,  # Model name as string from config
+        name=AGENT_NAME,
+        instruction=SYSTEM_INSTRUCTION,
+        tools=[search_local_resources, get_resource_details],
+    )
+    print("✓ Root agent created successfully")
+    print(f"✓ Agent model: {root_agent.canonical_model if hasattr(root_agent, 'canonical_model') else 'N/A'}")
+except Exception as e:
+    print(f"✗ Failed to create root agent: {e}")
+    import traceback
+    traceback.print_exc()
+    # Create a minimal agent to allow service to start
+    root_agent = None
 

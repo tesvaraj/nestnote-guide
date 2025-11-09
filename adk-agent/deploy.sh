@@ -73,10 +73,12 @@ gcloud run deploy $SERVICE_NAME \
   --allow-unauthenticated \
   --set-env-vars GOOGLE_API_KEY=$GOOGLE_API_KEY \
   --memory 1Gi \
+  --cpu 1 \
   --timeout 300 \
   --max-instances 10 \
   --min-instances 0 \
-  --cpu 1 \
+  --cpu-boost \
+  --clear-base-image \
   --project $PROJECT_ID
 
 # Get service URL
