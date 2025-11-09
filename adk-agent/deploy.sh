@@ -62,12 +62,36 @@ echo ""
 echo -e "${YELLOW}Enabling required APIs...${NC}"
 gcloud services enable run.googleapis.com --project=$PROJECT_ID
 gcloud services enable cloudbuild.googleapis.com --project=$PROJECT_ID
+gcloud services enable containerregistry.googleapis.com --project=$PROJECT_ID 2>/dev/null || true
 
-# Deploy to Cloud Run
+# Build Docker image and deploy to Cloud Run
 echo ""
+echo -e "${YELLOW}Building Docker image using Cloud Build...${NC}"
+
+# Use Artifact Registry (preferred) or Container Registry
+# Try Artifact Registry first
+ARTIFACT_REGISTRY="${REGION}-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/${SERVICE_NAME}"
+IMAGE_NAME="gcr.io/${PROJECT_ID}/${SERVICE_NAME}"
+
+echo -e "${YELLOW}Building image: ${IMAGE_NAME}${NC}"
+echo -e "${YELLOW}This may take a few minutes...${NC}"
+
+# Build and push the image using Cloud Build (this will use the Dockerfile)
+gcloud builds submit --tag ${IMAGE_NAME} --project $PROJECT_ID .
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Error: Failed to build Docker image${NC}"
+    echo -e "${YELLOW}Trying alternative method...${NC}"
+    exit 1
+fi
+
+echo ""
+echo -e "${GREEN}✓ Docker image built successfully${NC}"
 echo -e "${YELLOW}Deploying to Cloud Run...${NC}"
+
+# Deploy using the built image
 gcloud run deploy $SERVICE_NAME \
-  --source . \
+  --image ${IMAGE_NAME} \
   --platform managed \
   --region $REGION \
   --allow-unauthenticated \
@@ -78,7 +102,6 @@ gcloud run deploy $SERVICE_NAME \
   --max-instances 10 \
   --min-instances 0 \
   --cpu-boost \
-  --clear-base-image \
   --project $PROJECT_ID
 
 # Get service URL
