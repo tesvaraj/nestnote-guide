@@ -173,8 +173,9 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
   };
 
   // Steps that need content warnings (sensitive topics)
-  const sensitiveSteps = [7, 8, 9, 14, 23, 24, 25, 26, 27, 28];
-  const isSensitiveStep = sensitiveSteps.includes(step);
+  // Steps 7-28 are housing application questions, only show warning if user opted in
+  const housingApplicationSensitiveSteps = [7, 8, 9, 14, 23, 24, 25, 26, 27, 28];
+  const isSensitiveStep = formData.housingApplicationOptIn === "yes" && housingApplicationSensitiveSteps.includes(step);
 
   // Calculate total steps and progress
   // Adjust current step if we skipped the housing application section
