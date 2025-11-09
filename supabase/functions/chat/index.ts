@@ -32,6 +32,11 @@ serve(async (req) => {
                            lastMessage.includes("find") ||
                            lastMessage.includes("need") ||
                            lastMessage.includes("food") ||
+                           lastMessage.includes("meal") ||
+                           lastMessage.includes("eat") ||
+                           lastMessage.includes("hungry") ||
+                           lastMessage.includes("kitchen") ||
+                           lastMessage.includes("pantry") ||
                            lastMessage.includes("school") ||
                            lastMessage.includes("transport") ||
                            lastMessage.includes("plan") ||
@@ -121,14 +126,21 @@ Remember: You're not just providing information - you're supporting someone thro
       function_declarations: [
         {
           name: "provide_resource_recommendations",
-          description: "Search and recommend organizations from the resource database based on user needs. Use when user asks about youth shelters, food/meals, or any specific service category. IMPORTANT: Always provide conversational text response along with calling this tool - never call it silently.",
+          description: "Search and recommend organizations from the resource database based on user needs. Use when user asks about shelters, food, meals, or any specific service. IMPORTANT: Always provide conversational text response along with calling this tool - never call it silently.",
           parameters: {
             type: "OBJECT",
             properties: {
               service_category: {
                 type: "STRING",
-                description: "The service category to search. Options: 'Homeless Youth Shelters' for youth/teen shelter needs, 'Soup Kitchens' for food/meal needs. Map user's request to the appropriate category.",
-                enum: ["Homeless Youth Shelters", "Soup Kitchens"]
+                description: `The service category to search. Map user's request to the appropriate category:
+- For youth/teen/runaway shelter needs: "Homeless Youth Services" or "Runaway/Youth Shelters"
+- For general shelter/housing: "Homeless Shelter"
+- For food/meals/eating/hungry: "Soup Kitchens" or "Food Pantries" 
+- For families with children: "Homeless Youth Services"
+- For transitional housing: "Transitional Housing/Shelter"
+- For drop-in centers: "Homeless Drop In Centers"
+- For domestic violence: "Domestic Violence Shelter"`,
+                enum: resourcesData.map(cat => cat.service_name)
               },
               user_filters: {
                 type: "OBJECT",
