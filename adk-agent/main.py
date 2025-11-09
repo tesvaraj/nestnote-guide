@@ -118,40 +118,40 @@ search_resources_tool = types.Tool(
         types.FunctionDeclaration(
             name='search_local_resources',
             description='Search the local Sacramento resources database for shelters, food services, and support organizations',
-            parameters=types.Schema(
-                type=types.Type.OBJECT,
-                properties={
-                    'service_category': types.Schema(
-                        type=types.Type.STRING,
-                        description='Service category: "Homeless Youth Shelters" or "Soup Kitchens"'
-                    ),
-                    'user_filters': types.Schema(
-                        type=types.Type.OBJECT,
-                        description='Demographic and accessibility filters',
-                        properties={
-                            'services_youth': types.Schema(type=types.Type.BOOLEAN),
-                            'services_families': types.Schema(type=types.Type.BOOLEAN),
-                            'services_lgbtq': types.Schema(type=types.Type.BOOLEAN),
-                            'wheelchair_accessible': types.Schema(type=types.Type.BOOLEAN),
+            parameters={
+                'type': 'object',
+                'properties': {
+                    'service_category': {
+                        'type': 'string',
+                        'description': 'Service category: "Homeless Youth Shelters" or "Soup Kitchens"'
+                    },
+                    'user_filters': {
+                        'type': 'object',
+                        'description': 'Demographic and accessibility filters',
+                        'properties': {
+                            'services_youth': {'type': 'boolean'},
+                            'services_families': {'type': 'boolean'},
+                            'services_lgbtq': {'type': 'boolean'},
+                            'wheelchair_accessible': {'type': 'boolean'},
                         }
-                    )
+                    }
                 },
-                required=['service_category']
-            )
+                'required': ['service_category']
+            }
         ),
         types.FunctionDeclaration(
             name='get_resource_details',
             description='Get detailed information about a specific resource organization',
-            parameters=types.Schema(
-                type=types.Type.OBJECT,
-                properties={
-                    'resource_uuid': types.Schema(
-                        type=types.Type.STRING,
-                        description='UUID of the organization'
-                    )
+            parameters={
+                'type': 'object',
+                'properties': {
+                    'resource_uuid': {
+                        'type': 'string',
+                        'description': 'UUID of the organization'
+                    }
                 },
-                required=['resource_uuid']
-            )
+                'required': ['resource_uuid']
+            }
         )
     ]
 )
