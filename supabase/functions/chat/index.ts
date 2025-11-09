@@ -382,6 +382,15 @@ Remember: You're not just providing information - you're supporting someone thro
                 // Filter organizations based on user criteria
                 let matchedOrgs: any[] = category.organizations;
                 
+                // CRITICAL: Only include resources with valid addresses
+                matchedOrgs = matchedOrgs.filter((org: any) => {
+                  const address = org.address || '';
+                  // Filter out organizations without valid addresses
+                  return address.trim() !== '' && 
+                         !address.toLowerCase().includes('not listed') &&
+                         !address.toLowerCase().includes('n/a');
+                });
+                
                 // CRITICAL: Filter out irrelevant resources
                 // Remove animal shelters/pet services when looking for human housing/shelters
                 if (serviceCategory.toLowerCase().includes('shelter') || serviceCategory.toLowerCase().includes('housing')) {
