@@ -90,41 +90,84 @@ def search_local_resources(
             "recommendations": []
         }
     
-    # Filter organizations
+    # Filter organizations - EXTREMELY STRICT
     matched_orgs = category['organizations']
     
-    # CRITICAL: STRICT address validation - exclude ANYTHING without a complete address
-    def has_valid_address(org):
+    print(f"Initial org count for {service_category}: {len(matched_orgs)}")
+    
+    # CRITICAL STEP 1: STRICT address validation - exclude ANYTHING without a complete address
+    def has_valid_complete_address(org):
+        """Check if organization has a valid, complete physical address with all required components"""
         address = org.get('address', '').strip()
+        
+        # Must have an address
         if not address:
+            print(f"❌ Excluded {org.get('organization')}: No address")
             return False
         
         # Must not contain invalid indicators
-        invalid_indicators = ['not listed', 'n/a', 'various', 'call for', 'contact for', 'tbd', 'see website']
+        invalid_indicators = [
+            'not listed', 'n/a', 'various', 'call for', 'contact for', 
+            'tbd', 'see website', 'n.a.', 'na', 'varies', 'multiple locations',
+            'pending', 'unknown', 'call first', 'by appointment'
+        ]
         address_lower = address.lower()
         for indicator in invalid_indicators:
             if indicator in address_lower:
+                print(f"❌ Excluded {org.get('organization')}: Invalid address indicator '{indicator}'")
                 return False
         
-        # Must have a street number
+        # Must have a street number (at least one digit)
         import re
         if not re.search(r'\d', address):
+            print(f"❌ Excluded {org.get('organization')}: No street number")
             return False
         
+        # Must have city and state or ZIP
+        if not any(x in address_lower for x in ['ca', 'california', 'sacramento', '958', '956', '957']):
+            print(f"❌ Excluded {org.get('organization')}: Missing CA location")
+            return False
+        
+        print(f"✓ Accepted {org.get('organization')}: Valid address")
         return True
     
-    # Filter out resources without valid addresses
-    matched_orgs = [org for org in matched_orgs if has_valid_address(org)]
+    # Apply address filtering
+    matched_orgs = [org for org in matched_orgs if has_valid_complete_address(org)]
+    print(f"After address filter: {len(matched_orgs)} orgs")
     
-    # CRITICAL: Filter out ALL animal-related services - NEVER relevant for human housing
+    # CRITICAL STEP 2: Filter out ALL animal-related services - NEVER relevant for human housing
     def is_animal_service(org):
+        """Check if this is an animal/pet service"""
         org_name = (org.get('organization', '') or '').lower()
         org_desc = (org.get('description', '') or '').lower()
         
-        animal_keywords = ['animal', 'pet', 'tails', 'sanctuary', 'rescue', 'cats and dogs']
-        return any(keyword in org_name or keyword in org_desc for keyword in animal_keywords)
+        animal_keywords = [
+            'animal', 'pet', 'tails', 'sanctuary', 'rescue', 
+            'cats and dogs', 'dog', 'cat', 'veterinary', 'spca'
+        ]
+        
+        for keyword in animal_keywords:
+            if keyword in org_name or keyword in org_desc:
+                print(f"❌ Excluded {org.get('organization')}: Animal service ('{keyword}')")
+                return True
+        return False
     
     matched_orgs = [org for org in matched_orgs if not is_animal_service(org)]
+    print(f"After animal filter: {len(matched_orgs)} orgs")
+    
+    # CRITICAL STEP 3: Require phone OR hours to ensure it's a real, operating service
+    def has_contact_info(org):
+        """Check if org has basic contact information"""
+        has_phone = bool(org.get('phone', '').strip())
+        has_hours = bool(org.get('hours_of_operation', '').strip())
+        
+        if not (has_phone or has_hours):
+            print(f"❌ Excluded {org.get('organization')}: No phone or hours")
+            return False
+        return True
+    
+    matched_orgs = [org for org in matched_orgs if has_contact_info(org)]
+    print(f"After contact info filter: {len(matched_orgs)} orgs")
     
     # Apply demographic filters
     if user_filters:
@@ -132,6 +175,7 @@ def search_local_resources(
             org for org in matched_orgs
             if all(org.get(key, False) == value for key, value in user_filters.items() if value is True)
         ]
+        print(f"After demographic filters: {len(matched_orgs)} orgs")
     
     # Score organizations
     scored_orgs = []
@@ -177,18 +221,24 @@ def search_local_resources(
     scored_orgs.sort(key=lambda x: x['score'], reverse=True)
     top_matches = scored_orgs[:5]
     
-    # Format recommendations with full context for agent to understand
+    # Format recommendations - ONLY include what we know is valid
     recommendations = []
     for item in top_matches:
         org = item['org']
-        # Include full description and details so agent can understand and validate
+        
+        # Double-check this org has required data (should always pass due to filtering above)
+        if not org.get('address') or not org.get('organization'):
+            print(f"⚠️ Skipping {org.get('organization')} in final output - missing required data")
+            continue
+        
+        # Build recommendation with ONLY validated data
         recommendations.append({
             'id': org['uuid'],
             'name': org['organization'],
             'type': category['service_name'],
-            'address': org.get('address', 'Address not listed - please call for location'),
-            'phone': org.get('phone', 'Call 2-1-1 for contact info'),
-            'hours': org.get('hours_of_operation', 'Contact for hours'),
+            'address': org['address'],  # We know this exists and is valid
+            'phone': org.get('phone', ''),  # Empty string if not available
+            'hours': org.get('hours_of_operation', ''),  # Empty string if not available
             'description': org.get('description', ''),
             'website': org.get('website', ''),
             'email': org.get('email', ''),
@@ -206,9 +256,14 @@ def search_local_resources(
             },
             'total_beds': org.get('total_beds'),
             'available_beds': org.get('available_beds'),
-            'matchReason': f"Serves {', '.join(item['matched_services'])}" if item['matched_services'] else f"{category['service_name']} in Sacramento area",
+            'matchReason': f"Serves {', '.join(item['matched_services'])}" if item['matched_services'] else "Available resource",
             'match_score': item['score']
         })
+    
+    print(f"Final recommendations count: {len(recommendations)}")
+    
+    if len(recommendations) == 0:
+        print("⚠️ WARNING: No valid resources found after filtering!")
     
     return {
         "status": "success",
