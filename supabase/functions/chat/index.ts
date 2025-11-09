@@ -15,9 +15,12 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, userProfile, userLocation } = await req.json();
     const ADK_SERVICE_URL = Deno.env.get("ADK_SERVICE_URL");
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    
+    console.log("User profile:", userProfile);
+    console.log("User location:", userLocation);
     
     // If ADK service URL is configured, use it instead of direct Gemini API
     if (ADK_SERVICE_URL) {
@@ -92,8 +95,26 @@ serve(async (req) => {
     // Calculate total organizations across all service categories
     const totalOrgs = resourcesData.reduce((sum, category) => sum + category.organizations.length, 0);
 
+    // Build user context from profile
+    let userContext = "";
+    if (userProfile) {
+      const parts = [];
+      if (userProfile.name) parts.push(`Name: ${userProfile.name}`);
+      if (userProfile.age) parts.push(`Age: ${userProfile.age}`);
+      if (userProfile.housing_situation) parts.push(`Current housing: ${userProfile.housing_situation}`);
+      if (userProfile.immediate_needs?.length > 0) parts.push(`Immediate needs: ${userProfile.immediate_needs.join(', ')}`);
+      if (userProfile.has_children) parts.push(`Has children: Yes`);
+      if (userProfile.household_disability) parts.push(`Household has disability: Yes`);
+      if (userProfile.services_lgbtq) parts.push(`LGBTQ+ individual`);
+      if (userLocation?.address) parts.push(`Current location: ${userLocation.address}`);
+      
+      if (parts.length > 0) {
+        userContext = `\n\nUSER PROFILE:\n${parts.join('\n')}\n\nIMPORTANT: Use this profile information to provide personalized recommendations. Match resources based on their demographic needs, location proximity, and specific situation. DO NOT ask for information already in the profile unless you need clarification.`;
+      }
+    }
+    
     // System instruction for the agent
-    const systemInstruction = `You are a compassionate, non-judgmental first point of contact for young people experiencing homelessness or housing insecurity in Sacramento, CA. Your role is to listen, comfort, and connect users to the right resources (shelters, food, healthcare, etc.) quickly and respectfully.
+    const systemInstruction = `You are a compassionate, non-judgmental first point of contact for young people experiencing homelessness or housing insecurity in Sacramento, CA. Your role is to listen, comfort, and connect users to the right resources (shelters, food, healthcare, etc.) quickly and respectfully.${userContext}
 
 GUIDING PRINCIPLES:
 1. Kindness first - Every response should sound like it comes from someone who genuinely cares and wants to help. Warmth and encouragement are more important than speed or formality.
@@ -144,10 +165,16 @@ YOUR ROLE:
 - Match users with the RIGHT category:
   * Youth/runaway/teen shelter → Homeless Youth Shelters
   * Food/meals/hungry/kitchen → Soup Kitchens
-- When showing recommendations, explain WHY each resource might be a good fit
+  * NEVER recommend animal shelters/pet services when user needs housing
+- When showing recommendations, explain WHY each resource might be a good fit based on:
+  * User's age and demographic
+  * Their stated needs
+  * Geographic proximity to their location
+  * Services that match their situation (gender, family status, accessibility needs)
 - Always combine tool calls with conversational responses - never just call a tool silently
 - Use short, clear sentences with warmth
 - Make the user feel seen, safe, and supported
+- Prioritize resources within Sacramento over distant suburbs unless user specifically asks
 
 Context:
 - You have access to ${totalOrgs} organizations across ${resourcesData.length} service categories in Sacramento
@@ -354,6 +381,43 @@ Remember: You're not just providing information - you're supporting someone thro
                 
                 // Filter organizations based on user criteria
                 let matchedOrgs: any[] = category.organizations;
+                
+                // CRITICAL: Filter out irrelevant resources
+                // Remove animal shelters/pet services when looking for human housing/shelters
+                if (serviceCategory.toLowerCase().includes('shelter') || serviceCategory.toLowerCase().includes('housing')) {
+                  matchedOrgs = matchedOrgs.filter((org: any) => {
+                    const orgName = (org.organization || '').toLowerCase();
+                    const orgDesc = (org.description || '').toLowerCase();
+                    // Exclude if it's clearly animal/pet related
+                    return !(
+                      orgName.includes('animal') ||
+                      orgName.includes('pet') ||
+                      (orgDesc.includes('cats and dogs') || orgDesc.includes('pets'))
+                    );
+                  });
+                }
+                
+                // Filter by location proximity if userLocation is provided
+                if (userLocation?.lat && userLocation?.lng) {
+                  matchedOrgs = matchedOrgs.filter((org: any) => {
+                    if (!org.address) return true; // Keep if no address
+                    
+                    // Simple distance filter: exclude orgs clearly far away
+                    // Prioritize Sacramento addresses
+                    const address = (org.address || '').toLowerCase();
+                    
+                    // Always include Sacramento addresses
+                    if (address.includes('sacramento, ca')) return true;
+                    
+                    // Exclude Placerville (60+ miles away), Elk Grove if not in that area
+                    if (address.includes('placerville')) return false;
+                    if (address.includes('elk grove') && !userLocation.address?.toLowerCase().includes('elk grove')) {
+                      return false;
+                    }
+                    
+                    return true;
+                  });
+                }
                 
                 // Apply filters if provided
                 if (Object.keys(userFilters).length > 0) {

@@ -25,6 +25,7 @@ const Index = () => {
   const [showSetLocation, setShowSetLocation] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     // Set up auth state listener
@@ -50,6 +51,7 @@ const Index = () => {
         if (profile) {
           setHasProfile(true);
           setShowWelcome(false);
+          setUserProfile(profile); // Save profile for chat
         }
       }
     } catch (error) {
@@ -62,9 +64,11 @@ const Index = () => {
     setShowIntakeForm(true);
   };
 
-  const handleIntakeComplete = () => {
+  const handleIntakeComplete = async () => {
     setShowIntakeForm(false);
     setHasProfile(true);
+    // Reload profile after intake
+    await checkProfile();
   };
 
   const handleSaveResource = (resource: SavedResource) => {
@@ -185,6 +189,7 @@ const Index = () => {
                 savedResources={savedResources}
                 onSaveResource={handleSaveResource}
                 location={location}
+                userProfile={userProfile}
               />
           </div>
 

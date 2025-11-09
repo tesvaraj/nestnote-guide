@@ -35,9 +35,10 @@ interface ChatPanelProps {
   savedResources: SavedResource[];
   onSaveResource: (resource: SavedResource) => void;
   location?: { lat: number; lng: number; address: string } | null;
+  userProfile?: any; // Profile data from the database
 }
 
-export const ChatPanel = ({ savedResources, onSaveResource, location }: ChatPanelProps) => {
+export const ChatPanel = ({ savedResources, onSaveResource, location, userProfile }: ChatPanelProps) => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -139,7 +140,9 @@ export const ChatPanel = ({ savedResources, onSaveResource, location }: ChatPane
           messages: currentMessages.map(m => ({
             role: m.role,
             content: m.content
-          }))
+          })),
+          userProfile: userProfile,
+          userLocation: location
         }),
       });
 
