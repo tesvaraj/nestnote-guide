@@ -26,6 +26,7 @@ const Index = () => {
   const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [initialUserMessage, setInitialUserMessage] = useState<string>("");  // Store initial need
 
   useEffect(() => {
     // Set up auth state listener
@@ -59,16 +60,21 @@ const Index = () => {
     }
   };
 
-  const handleWelcomeContinue = () => {
+  const handleWelcomeContinue = (initialNeed?: string) => {
+    if (initialNeed) {
+      setInitialUserMessage(initialNeed);  // Save the initial need
+    }
     setShowWelcome(false);
     setShowIntakeForm(true);
   };
 
-  const handleIntakeComplete = async () => {
+  const handleIntakeComplete = async (asGuest?: boolean) => {
     setShowIntakeForm(false);
-    setHasProfile(true);
-    // Reload profile after intake
-    await checkProfile();
+    setHasProfile(!asGuest);  // If guest, don't set hasProfile
+    if (!asGuest) {
+      // Reload profile after full intake
+      await checkProfile();
+    }
   };
 
   const handleSaveResource = (resource: SavedResource) => {
@@ -92,7 +98,10 @@ const Index = () => {
     return (
       <>
         <GradientBackground />
-        <IntakeForm onComplete={handleIntakeComplete} />
+        <IntakeForm 
+          onComplete={handleIntakeComplete}
+          initialUserMessage={initialUserMessage}
+        />
       </>
     );
   }
@@ -192,6 +201,7 @@ const Index = () => {
                 onSaveResource={handleSaveResource}
                 location={location}
                 userProfile={userProfile}
+                initialUserMessage={initialUserMessage}  // Pass initial message to chat
               />
           </div>
 

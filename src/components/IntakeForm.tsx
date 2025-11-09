@@ -50,10 +50,11 @@ type FormData = {
 };
 
 interface IntakeFormProps {
-  onComplete: (data: FormData) => void;
+  onComplete: (asGuest?: boolean) => void;
+  initialUserMessage?: string;
 }
 
-export default function IntakeForm({ onComplete }: IntakeFormProps) {
+export default function IntakeForm({ onComplete, initialUserMessage }: IntakeFormProps) {
   const [step, setStep] = useState(1);
   const [isPaused, setIsPaused] = useState(false);
   const [showLearnMore, setShowLearnMore] = useState(false);
@@ -125,8 +126,8 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
 
   const handleContinue = () => {
     // Skip housing application questions if user opted out
-    if (step === 6 && formData.housingApplicationOptIn === "no") {
-      setStep(29); // Jump to health questions
+    if (step === 7 && formData.housingApplicationOptIn === "no") {
+      setStep(30); // Jump to health questions (adjusted for new step 5)
     } else {
       setStep((prev) => prev + 1);
     }
@@ -134,17 +135,17 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
 
   const handleSkip = () => {
     // Skip housing application questions if user opted out
-    if (step === 6 && formData.housingApplicationOptIn === "no") {
-      setStep(29); // Jump to health questions
+    if (step === 7 && formData.housingApplicationOptIn === "no") {
+      setStep(30); // Jump to health questions (adjusted for new step 5)
     } else {
       setStep((prev) => prev + 1);
     }
   };
 
   const handleBack = () => {
-    // If coming back from health questions (step 29) and user had opted out, go back to step 6
-    if (step === 29 && formData.housingApplicationOptIn === "no") {
-      setStep(6);
+    // If coming back from health questions (step 30) and user had opted out, go back to step 7
+    if (step === 30 && formData.housingApplicationOptIn === "no") {
+      setStep(7);
     } else {
       setStep((prev) => prev - 1);
     }
@@ -156,11 +157,16 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
       await saveProfile(formData);
       localStorage.removeItem("haven_form_progress"); // Clear saved progress
       toast.success("Thank you for sharing your story with us. We're here to help.");
-      onComplete(formData);
+      onComplete(false);  // Pass false to indicate full profile completed
     } catch (error) {
       console.error("Error saving profile:", error);
       toast.error("There was an error saving your information. Please try again.");
     }
+  };
+  
+  const handleContinueAsGuest = () => {
+    localStorage.removeItem("haven_form_progress");
+    onComplete(true);  // Pass true to indicate guest mode
   };
 
   const handlePause = () => {
@@ -173,14 +179,14 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
   };
 
   // Steps that need content warnings (sensitive topics)
-  // Steps 7-28 are housing application questions, only show warning if user opted in
-  const housingApplicationSensitiveSteps = [7, 8, 9, 14, 23, 24, 25, 26, 27, 28];
+  // Steps 8-29 are housing application questions (adjusted), only show warning if user opted in
+  const housingApplicationSensitiveSteps = [8, 9, 10, 15, 24, 25, 26, 27, 28, 29];
   const isSensitiveStep = formData.housingApplicationOptIn === "yes" && housingApplicationSensitiveSteps.includes(step);
 
   // Calculate total steps and progress
   // Adjust current step if we skipped the housing application section
-  const totalSteps = formData.housingApplicationOptIn === "no" ? 11 : 33;
-  const adjustedStep = formData.housingApplicationOptIn === "no" && step > 6 ? step - 22 : step;
+  const totalSteps = formData.housingApplicationOptIn === "no" ? 12 : 34;  // Adjusted for new step 5
+  const adjustedStep = formData.housingApplicationOptIn === "no" && step > 7 ? step - 22 : step;
   const progressPercentage = (adjustedStep / totalSteps) * 100;
 
   if (isPaused) {
@@ -197,22 +203,8 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
             <Button onClick={handleResume} className="w-full">
               Resume Application
             </Button>
-            <Button
-              onClick={async () => {
-                try {
-                  const { saveProfile } = await import("@/lib/profileService");
-                  await saveProfile(formData);
-                  localStorage.removeItem("haven_form_progress");
-                  onComplete(formData);
-                } catch (error) {
-                  console.error("Error saving profile:", error);
-                  toast.error("There was an error saving your information. Please try again.");
-                }
-              }}
-              variant="outline"
-              className="w-full"
-            >
-              Skip to Resources
+            <Button onClick={handleContinueAsGuest} variant="outline" className="w-full">
+              Continue as Guest
             </Button>
           </div>
         </div>

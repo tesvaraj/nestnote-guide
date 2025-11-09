@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import Logo from "@/components/Logo";
 
 interface WelcomeScreenProps {
-  onContinue: () => void;
+  onContinue: (initialNeed?: string) => void;
 }
 
 export default function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
@@ -13,7 +13,7 @@ export default function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputText.trim()) {
-      onContinue();
+      onContinue(inputText.trim());  // Pass the initial need to parent
     }
   };
 

@@ -35,11 +35,19 @@ interface ChatPanelProps {
   savedResources: SavedResource[];
   onSaveResource: (resource: SavedResource) => void;
   location?: { lat: number; lng: number; address: string } | null;
-  userProfile?: any; // Profile data from the database
+  userProfile?: any;
+  initialUserMessage?: string;  // Initial need from onboarding
 }
 
-export const ChatPanel = ({ savedResources, onSaveResource, location, userProfile }: ChatPanelProps) => {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+export const ChatPanel = ({ savedResources, onSaveResource, location, userProfile, initialUserMessage }: ChatPanelProps) => {
+  const [messages, setMessages] = useState<Message[]>(
+    initialUserMessage 
+      ? [
+          initialMessages[0], // Keep the assistant greeting
+          { id: "initial-user", role: "user", content: initialUserMessage } // Add user's initial need
+        ]
+      : initialMessages
+  );
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [recDistances, setRecDistances] = useState<Record<string, number>>({});
