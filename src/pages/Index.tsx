@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SourcesPanel } from "@/features/resources/components/SourcesPanel";
@@ -13,6 +14,7 @@ import SetLocation from "@/components/SetLocation";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [savedResources, setSavedResources] = useState<SavedResource[]>([]);
@@ -22,9 +24,17 @@ const Index = () => {
   const [showUpdateProfile, setShowUpdateProfile] = useState(false);
   const [showSetLocation, setShowSetLocation] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
     checkProfile();
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const checkProfile = async () => {
@@ -108,14 +118,28 @@ const Index = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-white hover:bg-white/20"
-              title="Login"
-            >
-              Login
-            </Button>
+            {user && !user.is_anonymous ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-white/20"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  navigate("/auth");
+                }}
+              >
+                Logout
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-white/20"
+                onClick={() => navigate("/auth")}
+              >
+                Login
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
