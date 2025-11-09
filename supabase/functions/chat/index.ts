@@ -30,6 +30,10 @@ serve(async (req) => {
                            lastMessage.includes("housing") ||
                            lastMessage.includes("find") ||
                            lastMessage.includes("need") ||
+                           lastMessage.includes("food") ||
+                           lastMessage.includes("school") ||
+                           lastMessage.includes("transport") ||
+                           lastMessage.includes("plan") ||
                            lastMessage.includes("recommend");
     
     const isDetailRequest = lastMessage.includes("amenities") ||
@@ -83,11 +87,11 @@ Current capabilities:
 Remember: You're not just providing information - you're supporting someone through a difficult time. Be warm, be patient, and ask questions to truly help them.`;
 
     // Define tools for resource recommendations and details
-    const tools = (isResourceQuery || isDetailRequest) ? [{
+    const tools = [{
       function_declarations: [
         {
           name: "provide_resource_recommendations",
-          description: "Provide exactly 3 shelter or housing resource recommendations with BASIC information only. Use this when user asks for recommendations or needs to find resources.",
+          description: "ALWAYS call this function when user asks about beds, shelters, housing, food, transport, school, or says 'find', 'need', 'show plan'. Provide exactly 3 shelter or housing resource recommendations with BASIC information only.",
           parameters: {
             type: "OBJECT",
             properties: {
@@ -114,7 +118,7 @@ Remember: You're not just providing information - you're supporting someone thro
           }
         }
       ]
-    }] : undefined;
+    }];
 
     // Use Gemini 2.5 Flash with Google ADK approach
     const response = await fetch(
