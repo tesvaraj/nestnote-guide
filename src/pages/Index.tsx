@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Menu, X, User } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SourcesPanel } from "@/features/resources/components/SourcesPanel";
 import { ChatPanel } from "@/features/chat/components/ChatPanel";
@@ -110,12 +110,11 @@ const Index = () => {
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
-              size="icon"
-              onClick={() => setShowUpdateProfile(true)}
+              size="sm"
               className="text-white hover:bg-white/20"
-              title="Update Profile"
+              title="Login"
             >
-              <User className="h-5 w-5" />
+              Login
             </Button>
             <Button
               variant="ghost"
