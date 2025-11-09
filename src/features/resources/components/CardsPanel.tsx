@@ -114,7 +114,7 @@ export const CardsPanel = ({ onUpdateProfile, onSetLocation, location }: CardsPa
                       <span className="text-sm text-foreground font-medium">{shelter.name}</span>
                       {shelter.distance !== null ? (
                         <p className="text-xs text-muted-foreground">
-                          {formatDistance(shelter.distance)}
+                          Number of miles is: {shelter.distance!.toFixed(1)} mi
                         </p>
                       ) : (
                         <p className="text-xs text-muted-foreground/70">Distance unknown</p>
