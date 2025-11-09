@@ -182,7 +182,7 @@ export default function UpdateProfile({ open, onOpenChange }: UpdateProfileProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto z-50">
         <DialogHeader>
           <DialogTitle className="text-2xl">Update Your Profile</DialogTitle>
         </DialogHeader>
