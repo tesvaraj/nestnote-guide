@@ -5,6 +5,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Load resources data
+let resourcesData: any[] = [];
+try {
+  const resourcesText = await Deno.readTextFile("./resources-data.json");
+  resourcesData = JSON.parse(resourcesText);
+  console.log(`Loaded ${resourcesData.length} resources from JSON`);
+} catch (error) {
+  console.error("Failed to load resources data:", error);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -20,13 +30,20 @@ serve(async (req) => {
 
     console.log("Chat request received with", messages.length, "messages");
 
-    // Check if this is a resource search query
+    // Check if this is a resource search query or detail request
     const lastMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
     const isResourceQuery = lastMessage.includes("bed") || 
                            lastMessage.includes("shelter") || 
                            lastMessage.includes("housing") ||
                            lastMessage.includes("find") ||
-                           lastMessage.includes("need");
+                           lastMessage.includes("need") ||
+                           lastMessage.includes("recommend");
+    
+    const isDetailRequest = lastMessage.includes("amenities") ||
+                           lastMessage.includes("services") ||
+                           lastMessage.includes("more about") ||
+                           lastMessage.includes("details") ||
+                           lastMessage.includes("tell me more");
 
     // Build conversation history in Gemini format
     const contents = messages.map((msg: any) => ({
@@ -40,7 +57,8 @@ serve(async (req) => {
 Your role:
 - Provide clear, compassionate guidance about housing resources, shelters, and support services
 - Help users understand their options based on their profile and situation
-- When users search for beds, shelters, or housing, provide 3-5 specific resource recommendations
+- When users search for beds, shelters, or housing, use the provide_resource_recommendations tool to show 3 specific resources with BASIC info only (name, type, address, phone, hours)
+- If users ask for more details about amenities, services, or specific features, use the provide_detailed_resource_info tool to show full information
 - Answer questions about available beds, locations, and how to access services
 - Be supportive and encouraging while maintaining professionalism
 - When relevant, suggest updating their profile to get better-matched resources
@@ -50,64 +68,48 @@ Context:
 - Focus on actionable information and next steps
 - Keep responses concise but helpful
 - The platform has resources including shelters, beds, and support services
+- You have access to a database of ${resourcesData.length} resources with detailed information
 
 Current capabilities:
 - General guidance about housing and homelessness resources
 - Information about the NestNote platform
 - Help with understanding how to use the service
 - Emotional support and encouragement
-- Providing specific shelter and bed recommendations that users can save`;
+- Providing specific shelter and bed recommendations with basic info
+- Providing detailed information about specific resources when asked`;
 
-    // Define the tool for resource recommendations
-    const tools = isResourceQuery ? [{
-      function_declarations: [{
-        name: "provide_resource_recommendations",
-        description: "Provide 3-5 specific shelter or housing resource recommendations based on the user's needs",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            recommendations: {
-              type: "ARRAY",
-              description: "List of 3-5 resource recommendations",
-              items: {
-                type: "OBJECT",
-                properties: {
-                  id: {
-                    type: "STRING",
-                    description: "Unique identifier for the resource"
-                  },
-                  name: {
-                    type: "STRING",
-                    description: "Name of the shelter or resource"
-                  },
-                  type: {
-                    type: "STRING",
-                    description: "Type of resource (e.g., 'Emergency Shelter', 'Transitional Housing', 'Day Center')"
-                  },
-                  address: {
-                    type: "STRING",
-                    description: "Full address of the resource"
-                  },
-                  phone: {
-                    type: "STRING",
-                    description: "Contact phone number"
-                  },
-                  hours: {
-                    type: "STRING",
-                    description: "Operating hours or availability"
-                  },
-                  matchReason: {
-                    type: "STRING",
-                    description: "Brief explanation of why this resource matches the user's needs"
-                  }
-                },
-                required: ["id", "name", "type", "address", "matchReason"]
+    // Define tools for resource recommendations and details
+    const tools = (isResourceQuery || isDetailRequest) ? [{
+      function_declarations: [
+        {
+          name: "provide_resource_recommendations",
+          description: "Provide exactly 3 shelter or housing resource recommendations with BASIC information only. Use this when user asks for recommendations or needs to find resources.",
+          parameters: {
+            type: "OBJECT",
+            properties: {
+              query: {
+                type: "STRING",
+                description: "The user's search query or needs (e.g., 'family shelter', 'emergency bed', 'veterans housing')"
               }
-            }
-          },
-          required: ["recommendations"]
+            },
+            required: ["query"]
+          }
+        },
+        {
+          name: "provide_detailed_resource_info",
+          description: "Provide detailed information about specific resources including amenities, services, accessibility. Use when user asks for more details, amenities, or specific features.",
+          parameters: {
+            type: "OBJECT",
+            properties: {
+              resource_name: {
+                type: "STRING",
+                description: "Name of the resource to get details about"
+              }
+            },
+            required: ["resource_name"]
+          }
         }
-      }]
+      ]
     }] : undefined;
 
     // Use Gemini 2.5 Flash with Google ADK approach
@@ -221,7 +223,7 @@ Current capabilities:
                   }
 
                   // Handle function calls (tool calls)
-                  if (functionCall && functionCall.name === "provide_resource_recommendations") {
+                  if (functionCall) {
                     toolCalls.push(functionCall);
                   }
                 } catch (e) {
@@ -231,21 +233,86 @@ Current capabilities:
             }
           }
           
-          // After streaming text, send recommendations if any tool calls were made
-          if (toolCalls.length > 0 && toolCalls[0].args?.recommendations) {
-            const recommendations = toolCalls[0].args.recommendations;
-            console.log("Sending recommendations:", recommendations);
-            
-            const recFormat = {
-              choices: [{
-                delta: { 
-                  recommendations: recommendations
+          // After streaming text, process tool calls
+          if (toolCalls.length > 0) {
+            for (const toolCall of toolCalls) {
+              if (toolCall.name === "provide_resource_recommendations") {
+                // Get 3 random resources with basic info only
+                const shuffled = [...resourcesData].sort(() => 0.5 - Math.random());
+                const selectedResources = shuffled.slice(0, 3);
+                
+                const recommendations = selectedResources.map(r => ({
+                  id: r.id,
+                  name: r.name,
+                  type: r.resource_type,
+                  address: r.address,
+                  phone: r.phone || "Call 2-1-1 for info",
+                  hours: r.hours_of_operation || "Contact for hours",
+                  matchReason: `${r.resource_type} with ${r.total_beds || 'multiple'} beds available`
+                }));
+                
+                console.log("Sending basic recommendations:", recommendations);
+                
+                const recFormat = {
+                  choices: [{
+                    delta: { 
+                      recommendations: recommendations
+                    }
+                  }]
+                };
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify(recFormat)}\n\n`)
+                );
+              } else if (toolCall.name === "provide_detailed_resource_info") {
+                // Find the resource and send detailed info
+                const resourceName = toolCall.args?.resource_name;
+                const resource = resourcesData.find(r => 
+                  r.name.toLowerCase().includes(resourceName?.toLowerCase() || "")
+                );
+                
+                if (resource) {
+                  const detailedInfo = `
+**Full Details for ${resource.name}:**
+
+📍 **Location:** ${resource.address}
+📞 **Phone:** ${resource.phone || "Call 2-1-1"}
+⏰ **Hours:** ${resource.hours_of_operation}
+
+**Resource Type:** ${resource.resource_type}
+**Total Beds:** ${resource.total_beds || "Contact for availability"}
+
+**Services Available:**
+${resource.services_families ? "✓ Families" : ""}
+${resource.services_male ? "✓ Men" : ""}
+${resource.services_female ? "✓ Women" : ""}
+${resource.services_youth ? "✓ Youth" : ""}
+${resource.services_seniors ? "✓ Seniors" : ""}
+${resource.services_veterans ? "✓ Veterans" : ""}
+${resource.services_lgbtq ? "✓ LGBTQ+" : ""}
+${resource.services_pets_allowed ? "✓ Pets Allowed" : "✗ No Pets"}
+
+**Amenities:**
+${resource.amenities?.map((a: string) => `• ${a}`).join("\n") || "Contact for details"}
+
+**Intake Instructions:**
+${resource.intake_instructions || "Contact directly for intake process"}
+
+${resource.wheelchair_accessible ? "♿ Wheelchair Accessible" : ""}
+`;
+                  
+                  const detailFormat = {
+                    choices: [{
+                      delta: { 
+                        content: detailedInfo
+                      }
+                    }]
+                  };
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify(detailFormat)}\n\n`)
+                  );
                 }
-              }]
-            };
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify(recFormat)}\n\n`)
-            );
+              }
+            }
           }
           
           controller.enqueue(encoder.encode('data: [DONE]\n\n'));
