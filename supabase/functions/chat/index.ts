@@ -16,10 +16,45 @@ serve(async (req) => {
 
   try {
     const { messages } = await req.json();
+    const ADK_SERVICE_URL = Deno.env.get("ADK_SERVICE_URL");
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     
+    // If ADK service URL is configured, use it instead of direct Gemini API
+    if (ADK_SERVICE_URL) {
+      console.log("Using ADK agent service:", ADK_SERVICE_URL);
+      
+      try {
+        const adkResponse = await fetch(`${ADK_SERVICE_URL}/query`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messages,
+            stream: true,
+          }),
+        });
+
+        if (!adkResponse.ok) {
+          const errorText = await adkResponse.text();
+          console.error("ADK service error:", adkResponse.status, errorText);
+          throw new Error(`ADK service error: ${adkResponse.status}`);
+        }
+
+        // Return the ADK service response stream
+        return new Response(adkResponse.body, {
+          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+        });
+      } catch (error) {
+        console.error("Error calling ADK service:", error);
+        // Fall through to direct Gemini API call as fallback
+        console.log("Falling back to direct Gemini API");
+      }
+    }
+    
+    // Fallback to direct Gemini API (original implementation)
     if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is not configured");
+      throw new Error("GEMINI_API_KEY is not configured and ADK_SERVICE_URL is not available");
     }
 
     console.log("Chat request received with", messages.length, "messages");
