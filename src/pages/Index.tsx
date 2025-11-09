@@ -7,7 +7,7 @@ import { ChatPanel } from "@/features/chat/components/ChatPanel";
 import { CardsPanel } from "@/features/resources/components/CardsPanel";
 import { SavedResource } from "@/features/resources/types";
 import GradientBackground from "@/components/GradientBackground";
-import WelcomeScreen from "@/components/WelcomeScreen";
+import SignupWelcome from "@/components/SignupWelcome";
 import IntakeForm from "@/components/IntakeForm";
 import UpdateProfile from "@/components/UpdateProfile";
 import SetLocation from "@/components/SetLocation";
@@ -25,39 +25,64 @@ const Index = () => {
   const [showSetLocation, setShowSetLocation] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [session, setSession] = useState<any>(null);
+  const [signupCredentials, setSignupCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [profileData, setProfileData] = useState<any>(null);
 
   useEffect(() => {
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      
+      // Defer profile check
+      if (currentSession?.user) {
+        setTimeout(() => {
+          checkProfile();
+        }, 0);
+      }
     });
 
-    checkProfile();
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      if (currentSession?.user) {
+        checkProfile();
+      }
+    });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const checkProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser && !currentUser.is_anonymous) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', currentUser.id)
           .single();
         
         if (profile) {
+          setProfileData(profile);
           setHasProfile(true);
           setShowWelcome(false);
+          setShowIntakeForm(false);
+        } else {
+          // User exists but no profile - show intake
+          setShowWelcome(false);
+          setShowIntakeForm(true);
         }
       }
     } catch (error) {
-      console.log("No profile yet, showing onboarding");
+      console.log("No profile yet");
     }
   };
 
-  const handleWelcomeContinue = () => {
+  const handleWelcomeContinue = (email: string, password: string) => {
+    setSignupCredentials({ email, password });
     setShowWelcome(false);
     setShowIntakeForm(true);
   };
@@ -65,6 +90,8 @@ const Index = () => {
   const handleIntakeComplete = () => {
     setShowIntakeForm(false);
     setHasProfile(true);
+    setSignupCredentials(null);
+    checkProfile();
   };
 
   const handleSaveResource = (resource: SavedResource) => {
@@ -74,22 +101,56 @@ const Index = () => {
     });
   };
 
-  // Show onboarding if no profile
-  if (showWelcome) {
+  // Show signup welcome if no user
+  if (showWelcome && !user) {
     return (
       <>
         <GradientBackground />
-        <WelcomeScreen onContinue={handleWelcomeContinue} />
+        <SignupWelcome 
+          onContinue={handleWelcomeContinue}
+          onLogin={() => navigate("/auth")}
+        />
       </>
     );
   }
 
   if (showIntakeForm) {
     return (
-      <>
-        <GradientBackground />
-        <IntakeForm onComplete={handleIntakeComplete} />
-      </>
+      <div className="relative min-h-screen">
+        {/* Background with main interface */}
+        <div className="absolute inset-0">
+          <GradientBackground />
+          {/* Show blurred main interface in background */}
+          <div className="h-screen flex flex-col blur-sm opacity-50 pointer-events-none">
+            <header className="h-14 border-b border-panel-border flex items-center justify-between px-4 bg-gradient-to-br from-[hsl(var(--gradient-yellow))] via-[hsl(var(--gradient-blue-light))] to-[hsl(var(--gradient-blue))]">
+              <h1 className="text-3xl font-['Cute_Font'] text-white drop-shadow-lg">
+                Haven
+              </h1>
+            </header>
+            <div className="flex-1 grid grid-cols-3 overflow-hidden">
+              <div className="border-r border-panel-border bg-background"></div>
+              <div className="border-r border-panel-border bg-background"></div>
+              <div className="bg-background"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sheer white overlay */}
+        <div className="absolute inset-0 bg-white/40 backdrop-blur-sm"></div>
+
+        {/* Intake form modal */}
+        <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+          <div className="bg-background/95 backdrop-blur-md rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <div className="overflow-y-auto max-h-[90vh] p-8">
+              <IntakeForm 
+                onComplete={handleIntakeComplete}
+                email={signupCredentials?.email}
+                password={signupCredentials?.password}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 

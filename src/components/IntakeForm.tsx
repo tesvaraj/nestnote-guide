@@ -51,9 +51,11 @@ type FormData = {
 
 interface IntakeFormProps {
   onComplete: (data: FormData) => void;
+  email?: string;
+  password?: string;
 }
 
-export default function IntakeForm({ onComplete }: IntakeFormProps) {
+export default function IntakeForm({ onComplete, email, password }: IntakeFormProps) {
   const [step, setStep] = useState(1);
   const [isPaused, setIsPaused] = useState(false);
   const [showLearnMore, setShowLearnMore] = useState(false);
@@ -152,9 +154,33 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
 
   const handleSubmit = async () => {
     try {
+      // If email and password provided, create account
+      if (email && password) {
+        const { data: authData, error: authError } = await import("@/integrations/supabase/client").then(
+          (mod) => mod.supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/`,
+            },
+          })
+        );
+
+        if (authError) {
+          console.error("Error creating account:", authError);
+          toast.error("There was an error creating your account. Please try again.");
+          return;
+        }
+
+        if (!authData.user) {
+          toast.error("Account creation failed. Please try again.");
+          return;
+        }
+      }
+
       const { saveProfile } = await import("@/lib/profileService");
       await saveProfile(formData);
-      localStorage.removeItem("haven_form_progress"); // Clear saved progress
+      localStorage.removeItem("haven_form_progress");
       toast.success("Thank you for sharing your story with us. We're here to help.");
       onComplete(formData);
     } catch (error) {
