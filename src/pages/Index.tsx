@@ -161,7 +161,7 @@ const Index = () => {
               ${rightPanelOpen ? "block" : "hidden lg:block lg:w-0"}
             `}
           >
-            <CardsPanel />
+            <CardsPanel onUpdateProfile={() => setShowUpdateProfile(true)} />
           </div>
         </div>
 

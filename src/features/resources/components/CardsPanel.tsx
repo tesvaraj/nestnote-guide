@@ -8,7 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-export const CardsPanel = () => {
+interface CardsPanelProps {
+  onUpdateProfile?: () => void;
+}
+
+export const CardsPanel = ({ onUpdateProfile }: CardsPanelProps) => {
   return (
     <div className="h-full flex flex-col bg-background">
       <div className="p-4 border-b border-panel-border">
@@ -43,7 +47,7 @@ export const CardsPanel = () => {
               <p className="text-sm text-muted-foreground mb-3">
                 Add info to get better recommendations
               </p>
-              <Button variant="outline" size="sm" className="w-full">
+              <Button variant="outline" size="sm" className="w-full" onClick={onUpdateProfile}>
                 Update Profile
               </Button>
             </CardContent>
