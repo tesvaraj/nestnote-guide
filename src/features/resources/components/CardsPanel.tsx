@@ -1,13 +1,15 @@
 // 📋 FRONTEND: Resource cards and info panel
 // Displays user profile, location, and available resources
 
+import { useMemo } from "react";
 import { MapPin, Bed, User, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
+import { sampleShelters } from "@/data/shelters";
+import { calculateDistance, formatDistance } from "@/lib/distanceUtils";
 interface CardsPanelProps {
   onUpdateProfile?: () => void;
   onSetLocation?: () => void;
@@ -15,6 +17,21 @@ interface CardsPanelProps {
 }
 
 export const CardsPanel = ({ onUpdateProfile, onSetLocation, location }: CardsPanelProps) => {
+  // Calculate distances for each shelter
+  const sheltersWithDistance = useMemo(() => {
+    if (!location) return sampleShelters.map(s => ({ ...s, distance: null }));
+    
+    return sampleShelters.map(shelter => ({
+      ...shelter,
+      distance: calculateDistance(
+        location.lat,
+        location.lng,
+        shelter.lat,
+        shelter.lng
+      )
+    })).sort((a, b) => (a.distance || 0) - (b.distance || 0)); // Sort by distance
+  }, [location]);
+
   return (
     <div className="h-full flex flex-col bg-background">
       <div className="p-4 border-b border-panel-border">
@@ -86,39 +103,27 @@ export const CardsPanel = ({ onUpdateProfile, onSetLocation, location }: CardsPa
                 Available Beds
               </CardTitle>
               <CardDescription className="text-xs">
-                {location ? "Near your location" : "Set location to see distances"}
+                {location ? "Sorted by distance from you" : "Set location to see distances"}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <span className="text-sm text-muted-foreground">Emergency Shelter</span>
-                    {location && (
-                      <p className="text-xs text-muted-foreground/70">0.8 miles away</p>
-                    )}
+              <div className="space-y-3">
+                {sheltersWithDistance.map((shelter) => (
+                  <div key={shelter.id} className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <span className="text-sm text-foreground font-medium">{shelter.name}</span>
+                      {shelter.distance !== null ? (
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistance(shelter.distance)}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground/70">Distance unknown</p>
+                      )}
+                    </div>
+                    <Badge variant="secondary">{shelter.availableBeds} beds</Badge>
                   </div>
-                  <Badge variant="secondary">12 beds</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <span className="text-sm text-muted-foreground">Youth Shelter</span>
-                    {location && (
-                      <p className="text-xs text-muted-foreground/70">1.2 miles away</p>
-                    )}
-                  </div>
-                  <Badge variant="secondary">5 beds</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <span className="text-sm text-muted-foreground">Family Shelter</span>
-                    {location && (
-                      <p className="text-xs text-muted-foreground/70">2.5 miles away</p>
-                    )}
-                  </div>
-                  <Badge variant="secondary">3 beds</Badge>
-                </div>
-                <Button variant="outline" size="sm" className="w-full mt-3">
+                ))}
+                <Button variant="outline" size="sm" className="w-full mt-2">
                   Book a Bed
                 </Button>
               </div>
