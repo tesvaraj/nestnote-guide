@@ -144,10 +144,11 @@ def search_local_resources(
     scored_orgs.sort(key=lambda x: x['score'], reverse=True)
     top_matches = scored_orgs[:5]
     
-    # Format recommendations
+    # Format recommendations with full context for agent to understand
     recommendations = []
     for item in top_matches:
         org = item['org']
+        # Include full description and details so agent can understand and validate
         recommendations.append({
             'id': org['uuid'],
             'name': org['organization'],
@@ -155,14 +156,33 @@ def search_local_resources(
             'address': org.get('address', 'Address not listed - please call for location'),
             'phone': org.get('phone', 'Call 2-1-1 for contact info'),
             'hours': org.get('hours_of_operation', 'Contact for hours'),
-            'matchReason': f"Serves {', '.join(item['matched_services'])}" if item['matched_services'] else f"{category['service_name']} in Sacramento area"
+            'description': org.get('description', ''),
+            'website': org.get('website', ''),
+            'email': org.get('email', ''),
+            'services_offered': {
+                'male': org.get('services_male', False),
+                'female': org.get('services_female', False),
+                'gender_neutral': org.get('services_gender_neutral', False),
+                'families': org.get('services_families', False),
+                'youth': org.get('services_youth', False),
+                'seniors': org.get('services_seniors', False),
+                'veterans': org.get('services_veterans', False),
+                'lgbtq': org.get('services_lgbtq', False),
+                'pets_allowed': org.get('services_pets_allowed'),
+                'wheelchair_accessible': org.get('wheelchair_accessible', False)
+            },
+            'total_beds': org.get('total_beds'),
+            'available_beds': org.get('available_beds'),
+            'matchReason': f"Serves {', '.join(item['matched_services'])}" if item['matched_services'] else f"{category['service_name']} in Sacramento area",
+            'match_score': item['score']
         })
     
     return {
         "status": "success",
         "category": service_category,
         "count": len(recommendations),
-        "recommendations": recommendations
+        "recommendations": recommendations,
+        "user_query_context": f"Searching for {service_category} with filters: {user_filters}"
     }
 
 def get_resource_details(resource_uuid: str) -> Dict[str, Any]:
@@ -277,7 +297,22 @@ Your role:
 - Match users with the RIGHT category based on their needs:
   * Youth/runaway/teen shelter → Homeless Youth Shelters
   * Food/meals/hungry/kitchen → Soup Kitchens
-- When showing recommendations, explain WHY each resource might be a good fit
+
+CRITICAL - Understanding and Validation:
+- When you receive recommendations from search_local_resources, you receive FULL details about each resource
+- READ and UNDERSTAND each resource's description, services, and details before recommending
+- VALIDATE that each resource is actually a good fit for the user's specific needs
+- Check if the resource's services match what the user needs (e.g., if user needs youth services, verify the resource serves youth)
+- Review the description to understand what the resource actually does
+- If a resource doesn't seem like a good fit, DON'T recommend it - filter it out
+- Only recommend resources that you understand and can confidently say are relevant
+- If you're unsure about a resource, don't recommend it
+
+When showing recommendations:
+- EXPLAIN what each resource does based on its description
+- Explain WHY it's a good fit based on the user's specific needs
+- Mention specific services or features that make it relevant
+- Be honest if you're not sure about something
 - Always combine tool calls with conversational responses - never just call a tool silently
 - If users ask for more details about specific resources, use the get_resource_details tool
 - Be supportive and encouraging while maintaining professionalism
@@ -289,7 +324,14 @@ Context:
 - You have access to {total_orgs} organizations across {num_categories} service categories in Sacramento
 - Resources have demographic filters (youth, families, LGBTQ+, veterans, wheelchair accessible, pets)
 
-Remember: You're not just providing information - you're supporting someone through a difficult time. Be warm, be conversational, and show you care through your words WHILE providing helpful recommendations."""
+Remember: 
+- You're not just providing information - you're supporting someone through a difficult time
+- Be warm, be conversational, and show you care through your words
+- BUT ALSO: Understand what you're recommending before you recommend it
+- Validate that resources are actually good fits
+- Only recommend resources you understand and can confidently say are relevant
+- Quality over quantity - better to recommend 2 good resources than 5 questionable ones
+- Read descriptions, check services, validate relevance before presenting to the user"""
 
 # Create the root agent (with lazy instruction)
 # Wrap in try-except to prevent import failures
