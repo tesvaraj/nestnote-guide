@@ -31,8 +31,9 @@ All colors MUST be HSL.
     --muted: 209 25% 94%;
     --muted-foreground: 209 20% 50%;
 
-    --accent: 200 40% 68%;
-    --accent-foreground: 209 30% 25%;
+    /* Accent - lighter blue from gradient for hover states */
+    --accent: 221 100% 88%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 100%;
@@ -52,6 +53,9 @@ All colors MUST be HSL.
     --glass-bg: 0 0% 100%;
     --glass-border: 209 20% 85%;
     --glass-text: 209 30% 25%;
+    
+    /* Panel borders - light blue */
+    --panel-border: 221 80% 85%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -142,5 +146,10 @@ All colors MUST be HSL.
     mix-blend-mode: overlay;
     pointer-events: none;
     z-index: 1;
+  }
+  
+  /* Intake form text should be white */
+  .noise-overlay label {
+    color: white;
   }
 }
