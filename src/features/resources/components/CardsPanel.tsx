@@ -1,7 +1,7 @@
 // 📋 FRONTEND: Resource cards and info panel
 // Displays user profile, location, and available resources
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo } from "react";
 import { MapPin, Bed, User, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { sampleShelters } from "@/data/shelters";
 import { calculateDistance, formatDistance } from "@/lib/distanceUtils";
-import { supabase } from "@/integrations/supabase/client";
-
 interface CardsPanelProps {
   onUpdateProfile?: () => void;
   onSetLocation?: () => void;
@@ -19,26 +17,6 @@ interface CardsPanelProps {
 }
 
 export const CardsPanel = ({ onUpdateProfile, onSetLocation, location }: CardsPanelProps) => {
-  const [userName, setUserName] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('name')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (profile?.name) {
-          setUserName(profile.name);
-        }
-      }
-    };
-    fetchProfile();
-  }, []);
-
   // Calculate distances for each shelter
   const sheltersWithDistance = useMemo(() => {
     if (!location) return sampleShelters.map(s => ({ ...s, distance: null }));
@@ -81,7 +59,7 @@ export const CardsPanel = ({ onUpdateProfile, onSetLocation, location }: CardsPa
                 Profile
               </CardTitle>
               <CardDescription className="text-xs">
-                {userName ? `Hi, ${userName}!` : "Your Profile"}
+                Anonymous user
               </CardDescription>
             </CardHeader>
             <CardContent>
