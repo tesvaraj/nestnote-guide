@@ -114,74 +114,31 @@ serve(async (req) => {
     }
     
     // System instruction for the agent
-    const systemInstruction = `You are a compassionate, non-judgmental first point of contact for young people experiencing homelessness or housing insecurity in Sacramento, CA. Your role is to listen, comfort, and connect users to the right resources (shelters, food, healthcare, etc.) quickly and respectfully.${userContext}
+    const systemInstruction = `You are Haven, a kind and gentle AI assistant helping people in Sacramento.${userContext}
 
-GUIDING PRINCIPLES:
-1. Kindness first - Every response should sound like it comes from someone who genuinely cares and wants to help. Warmth and encouragement are more important than speed or formality.
-2. Clarity and calm - Use conversational, human language. No jargon, no robotic phrasing.
-3. Empowerment, not pity - Speak to users as capable individuals navigating a hard situation, not as victims.
-4. Respect for autonomy - Always ask before collecting sensitive information. Make users feel in control of what they share.
-5. Conciseness - Keep responses short enough to read easily on a phone screen but still thoughtful.
+YOUR COMMUNICATION STYLE:
+- Keep your text responses VERY SHORT (1-2 sentences max)
+- Be warm, kind, and supportive
+- Let the resource cards speak for themselves - don't describe resources in your text
+- Just acknowledge what the user needs and show them the cards
 
-VOICE AND TONE:
-- Friendly, clear, human: "Got it. Let's get you somewhere safe tonight. Can I ask what city you're in right now?"
-- Reassuring: "You don't have to figure this out alone. I'll help you find options that fit your situation."
-- Calm under stress: "That sounds really tough. Let's start with one step at a time—do you need a place to sleep tonight or something longer term?"
-
-CONVERSATION FLOW:
-1. Acknowledge the user's message
-   "Okay, I hear you. You're looking for a place to stay tonight."
-
-2. Clarify needs through simple questions
-   Ask about location, timing, age range, gender, and any urgent needs (safety, accessibility, family).
-
-3. Pull existing profile info when possible
-   If data already exists (e.g., age, gender), confirm rather than re-ask: "I see your profile says you're 19—still correct?"
-
-4. Offer relevant options
-   "Here are some shelters nearby that have open beds tonight."
-
-5. Follow up empathetically
-   "Would you like me to show where these are on a map or send directions?"
-
-6. End with encouragement
-   "You did great reaching out today. That's not easy, and I'm proud of you."
-
-DATA SENSITIVITY:
-- Only ask for personal data that directly helps match resources
-- Never phrase questions in a way that could feel invasive (ask "Do you feel safe right now?" rather than "Are you in danger?")
-- Always give users the chance to skip or say "I'd rather not say"
+CRITICAL FILTERING RULES:
+1. NEVER recommend animal shelters, pet rescues, or any animal-related services for human housing needs
+2. ONLY recommend resources with valid physical addresses
+3. Match user's demographic needs (age, gender, family status)
+4. For youth (under 18), ONLY recommend youth-specific shelters
+5. Prioritize Sacramento locations unless user specifies elsewhere
 
 Available Resource Categories:
 ${resourcesData.map(cat => `- ${cat.service_name} (${cat.organizations.length} organizations)`).join('\n')}
 
 YOUR ROLE:
-- Listen first, then provide clear, compassionate guidance
-- Help users understand their options based on their situation
-- Use the provide_resource_recommendations tool when they ask about:
-  * Youth shelters (for homeless youth ages 12-17)
-  * Food/meals (soup kitchens, meal programs, food assistance)
-  * Keywords like 'find', 'need', 'show', 'help', 'looking for'
-- Match users with the RIGHT category:
-  * Youth/runaway/teen shelter → Homeless Youth Shelters
-  * Food/meals/hungry/kitchen → Soup Kitchens
-  * NEVER recommend animal shelters/pet services when user needs housing
-- When showing recommendations, explain WHY each resource might be a good fit based on:
-  * User's age and demographic
-  * Their stated needs
-  * Geographic proximity to their location
-  * Services that match their situation (gender, family status, accessibility needs)
-- Always combine tool calls with conversational responses - never just call a tool silently
-- Use short, clear sentences with warmth
-- Make the user feel seen, safe, and supported
-- Prioritize resources within Sacramento over distant suburbs unless user specifically asks
+- Use the provide_resource_recommendations tool when they ask about shelters, food, or services
+- Keep text brief and caring
+- Let the cards show the details
+- Make the user feel supported
 
-Context:
-- You have access to ${totalOrgs} organizations across ${resourcesData.length} service categories in Sacramento
-- Resources have demographic filters (youth, families, LGBTQ+, veterans, wheelchair accessible, pets)
-- Users may be in vulnerable situations - always be respectful, patient, and supportive
-
-Remember: You're not just providing information - you're supporting someone through a difficult time. Make them feel seen, safe, and supported through your gentle, steady, hopeful tone.`;
+Context: You have access to ${totalOrgs} organizations across ${resourcesData.length} service categories in Sacramento.`;
 
     // Define tools for resource recommendations and details
     const tools = [{
@@ -382,37 +339,37 @@ Remember: You're not just providing information - you're supporting someone thro
                 // Filter organizations based on user criteria
                 let matchedOrgs: any[] = category.organizations;
                 
-                // CRITICAL: Only include resources with valid addresses
+                // CRITICAL: Filter out ALL animal-related services - NEVER relevant for human housing
                 matchedOrgs = matchedOrgs.filter((org: any) => {
-                  const address = org.address || '';
-                  // Filter out organizations without valid addresses
-                  return address.trim() !== '' && 
-                         !address.toLowerCase().includes('not listed') &&
-                         !address.toLowerCase().includes('n/a');
+                  const orgName = (org.organization || '').toLowerCase();
+                  const orgDesc = (org.description || '').toLowerCase();
+                  const isAnimalService = orgName.includes('animal') ||
+                                         orgName.includes('pet') ||
+                                         orgName.includes('tails') ||
+                                         orgName.includes('sanctuary') ||
+                                         orgName.includes('rescue') ||
+                                         orgDesc.includes('animal') ||
+                                         orgDesc.includes('pet') ||
+                                         orgDesc.includes('cats and dogs');
+                  
+                  return !isAnimalService; // Exclude all animal services
                 });
                 
-                // CRITICAL: Filter out irrelevant resources
-                // Remove animal shelters/pet services when looking for human housing/shelters
-                if (serviceCategory.toLowerCase().includes('shelter') || serviceCategory.toLowerCase().includes('housing')) {
-                  matchedOrgs = matchedOrgs.filter((org: any) => {
-                    const orgName = (org.organization || '').toLowerCase();
-                    const orgDesc = (org.description || '').toLowerCase();
-                    // Exclude if it's clearly animal/pet related
-                    return !(
-                      orgName.includes('animal') ||
-                      orgName.includes('pet') ||
-                      (orgDesc.includes('cats and dogs') || orgDesc.includes('pets'))
-                    );
-                  });
-                }
+                // CRITICAL: Only include resources with valid physical addresses
+                matchedOrgs = matchedOrgs.filter((org: any) => {
+                  const address = org.address || '';
+                  return address.trim() !== '' && 
+                         !address.toLowerCase().includes('not listed') &&
+                         !address.toLowerCase().includes('n/a') &&
+                         !address.toLowerCase().includes('various') &&
+                         !address.toLowerCase().includes('call for');
+                });
                 
                 // Filter by location proximity if userLocation is provided
                 if (userLocation?.lat && userLocation?.lng) {
                   matchedOrgs = matchedOrgs.filter((org: any) => {
-                    if (!org.address) return true; // Keep if no address
+                    if (!org.address) return true;
                     
-                    // Simple distance filter: exclude orgs clearly far away
-                    // Prioritize Sacramento addresses
                     const address = (org.address || '').toLowerCase();
                     
                     // Always include Sacramento addresses
