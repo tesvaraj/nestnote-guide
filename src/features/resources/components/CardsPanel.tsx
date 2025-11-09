@@ -109,18 +109,21 @@ export const CardsPanel = ({ onUpdateProfile, onSetLocation, location }: CardsPa
             <CardContent>
               <div className="space-y-3">
                 {sheltersWithDistance.map((shelter) => (
-                  <div key={shelter.id} className="flex items-center justify-between">
-                    <div className="flex-1">
+                  <div key={shelter.id} className="space-y-1.5">
+                    <div className="flex items-center justify-between">
                       <span className="text-sm text-foreground font-medium">{shelter.name}</span>
-                      {shelter.distance !== null ? (
-                        <p className="text-xs text-muted-foreground">
-                          Number of miles is: {shelter.distance!.toFixed(1)} mi
-                        </p>
-                      ) : (
-                        <p className="text-xs text-muted-foreground/70">Distance unknown</p>
-                      )}
+                      <Badge variant="secondary">{shelter.availableBeds} beds</Badge>
                     </div>
-                    <Badge variant="secondary">{shelter.availableBeds} beds</Badge>
+                    {shelter.distance !== null ? (
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 text-primary" />
+                        <Badge variant="outline" className="text-xs font-bold">
+                          {shelter.distance.toFixed(1)} miles away
+                        </Badge>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground/70 pl-5">Distance unknown</p>
+                    )}
                   </div>
                 ))}
                 <Button variant="outline" size="sm" className="w-full mt-2">
