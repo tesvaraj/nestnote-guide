@@ -112,46 +112,46 @@ def get_resource_details(resource_uuid: str) -> Dict:
                 }
     return {}
 
-# Define agent tools
+# Define agent tools using OpenAPI-style schema (google-genai SDK expects this format)
 search_resources_tool = types.Tool(
     function_declarations=[
         types.FunctionDeclaration(
             name='search_local_resources',
             description='Search the local Sacramento resources database for shelters, food services, and support organizations',
-            parameters={
-                'type': 'object',
-                'properties': {
-                    'service_category': {
-                        'type': 'string',
-                        'description': 'Service category: "Homeless Youth Shelters" or "Soup Kitchens"'
-                    },
-                    'user_filters': {
-                        'type': 'object',
-                        'description': 'Demographic and accessibility filters',
-                        'properties': {
-                            'services_youth': {'type': 'boolean'},
-                            'services_families': {'type': 'boolean'},
-                            'services_lgbtq': {'type': 'boolean'},
-                            'wheelchair_accessible': {'type': 'boolean'},
+            parameters=types.Schema(
+                type='object',
+                properties={
+                    'service_category': types.Schema(
+                        type='string',
+                        description='Service category: "Homeless Youth Shelters" or "Soup Kitchens"'
+                    ),
+                    'user_filters': types.Schema(
+                        type='object',
+                        description='Demographic and accessibility filters',
+                        properties={
+                            'services_youth': types.Schema(type='boolean'),
+                            'services_families': types.Schema(type='boolean'),
+                            'services_lgbtq': types.Schema(type='boolean'),
+                            'wheelchair_accessible': types.Schema(type='boolean'),
                         }
-                    }
+                    )
                 },
-                'required': ['service_category']
-            }
+                required=['service_category']
+            )
         ),
         types.FunctionDeclaration(
             name='get_resource_details',
             description='Get detailed information about a specific resource organization',
-            parameters={
-                'type': 'object',
-                'properties': {
-                    'resource_uuid': {
-                        'type': 'string',
-                        'description': 'UUID of the organization'
-                    }
+            parameters=types.Schema(
+                type='object',
+                properties={
+                    'resource_uuid': types.Schema(
+                        type='string',
+                        description='UUID of the organization'
+                    )
                 },
-                'required': ['resource_uuid']
-            }
+                required=['resource_uuid']
+            )
         )
     ]
 )
