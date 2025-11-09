@@ -384,29 +384,49 @@ Context: You have access to ${totalOrgs} organizations across ${resourcesData.le
                   return !isAnimalService; // Exclude all animal services
                 });
                 
-                // CRITICAL: Only include resources with valid physical addresses
+                // CRITICAL: STRICT address validation - exclude ANYTHING without a complete address
+                console.log(`Initial orgs count: ${matchedOrgs.length}`);
                 matchedOrgs = matchedOrgs.filter((org: any) => {
                   const address = org.address || '';
-                  return address.trim() !== '' && 
-                         !address.toLowerCase().includes('not listed') &&
-                         !address.toLowerCase().includes('n/a') &&
-                         !address.toLowerCase().includes('various') &&
-                         !address.toLowerCase().includes('call for');
-                });
-                
-                // Calculate distances and filter by proximity if userLocation is provided
-                if (userLocation?.lat && userLocation?.lng) {
-                  console.log("Calculating distances from user location:", userLocation);
+                  const trimmedAddress = address.trim();
                   
-                  // Initialize Supabase client for geocoding cache
+                  // Must have an address
+                  if (!trimmedAddress) {
+                    console.log(`Excluded ${org.organization}: No address`);
+                    return false;
+                  }
+                  
+                  // Must not contain these invalid indicators
+                  const invalidIndicators = ['not listed', 'n/a', 'various', 'call for', 'contact for', 'tbd', 'see website'];
+                  const lowerAddress = trimmedAddress.toLowerCase();
+                  for (const indicator of invalidIndicators) {
+                    if (lowerAddress.includes(indicator)) {
+                      console.log(`Excluded ${org.organization}: Invalid address indicator "${indicator}"`);
+                      return false;
+                    }
+                  }
+                  
+                  // Must have street number and street name (basic validation)
+                  const hasNumber = /\d/.test(trimmedAddress);
+                  if (!hasNumber) {
+                    console.log(`Excluded ${org.organization}: No street number in address`);
+                    return false;
+                  }
+                  
+                  return true;
+                });
+                console.log(`After address validation: ${matchedOrgs.length} orgs`);
+                
+                // CRITICAL: Calculate distances and STRICTLY filter by proximity
+                if (userLocation?.lat && userLocation?.lng) {
+                  console.log("User location provided:", userLocation);
+                  console.log("Calculating distances for", matchedOrgs.length, "organizations");
+                  
                   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
                   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
                   
-                  // Geocode each resource and calculate distance
                   const orgsWithDistance = await Promise.all(
                     matchedOrgs.map(async (org: any) => {
-                      if (!org.address) return { org, distance: 999 };
-                      
                       try {
                         let resourceLat: number;
                         let resourceLon: number;
@@ -424,47 +444,47 @@ Context: You have access to ${totalOrgs} organizations across ${resourcesData.le
                         const cacheData = await cacheResp.json();
                         
                         if (Array.isArray(cacheData) && cacheData.length > 0) {
-                          // Use cached coordinates
                           resourceLat = cacheData[0].latitude;
                           resourceLon = cacheData[0].longitude;
-                          console.log(`Using cached location for ${org.organization}`);
+                          console.log(`✓ Cache hit for ${org.organization}`);
                         } else {
-                          // Geocode the resource address via API
+                          // Geocode via API
                           const geocodeResp = await fetch(
                             `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(org.address)}&format=json&limit=1`
                           );
                           const geocodeData = await geocodeResp.json();
                           
-                          if (Array.isArray(geocodeData) && geocodeData.length > 0) {
-                            resourceLat = parseFloat(geocodeData[0].lat);
-                            resourceLon = parseFloat(geocodeData[0].lon);
-                            
-                            // Store in cache for future use
-                            await fetch(
-                              `${SUPABASE_URL}/rest/v1/geocode_cache`,
-                              {
-                                method: 'POST',
-                                headers: {
-                                  'apikey': SUPABASE_SERVICE_ROLE_KEY || '',
-                                  'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                                  'Content-Type': 'application/json',
-                                  'Prefer': 'return=minimal'
-                                },
-                                body: JSON.stringify({
-                                  address: org.address,
-                                  latitude: resourceLat,
-                                  longitude: resourceLon,
-                                  display_name: geocodeData[0].display_name
-                                })
-                              }
-                            );
-                            console.log(`Cached location for ${org.organization}`);
-                          } else {
-                            return { org, distance: 999 };
+                          if (!Array.isArray(geocodeData) || geocodeData.length === 0) {
+                            console.log(`✗ Failed to geocode ${org.organization}: ${org.address}`);
+                            return { org, distance: 999, failed: true };
                           }
+                          
+                          resourceLat = parseFloat(geocodeData[0].lat);
+                          resourceLon = parseFloat(geocodeData[0].lon);
+                          
+                          // Cache for future
+                          await fetch(
+                            `${SUPABASE_URL}/rest/v1/geocode_cache`,
+                            {
+                              method: 'POST',
+                              headers: {
+                                'apikey': SUPABASE_SERVICE_ROLE_KEY || '',
+                                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                                'Content-Type': 'application/json',
+                                'Prefer': 'return=minimal'
+                              },
+                              body: JSON.stringify({
+                                address: org.address,
+                                latitude: resourceLat,
+                                longitude: resourceLon,
+                                display_name: geocodeData[0].display_name
+                              })
+                            }
+                          );
+                          console.log(`✓ Geocoded and cached ${org.organization}`);
                         }
                         
-                        // Calculate distance using Haversine formula
+                        // Calculate distance
                         const distance = calculateDistance(
                           userLocation.lat,
                           userLocation.lng,
@@ -472,22 +492,42 @@ Context: You have access to ${totalOrgs} organizations across ${resourcesData.le
                           resourceLon
                         );
                         
-                        console.log(`Distance to ${org.organization}: ${distance} miles`);
-                        return { org, distance };
+                        console.log(`${org.organization}: ${distance} miles away`);
+                        return { org, distance, failed: false };
                       } catch (e) {
-                        console.error(`Failed to geocode ${org.organization}:`, e);
-                        return { org, distance: 999 };
+                        console.error(`Error processing ${org.organization}:`, e);
+                        return { org, distance: 999, failed: true };
                       }
                     })
                   );
                   
-                  // Filter out resources more than 25 miles away and sort by distance
+                  // STRICT filtering: ONLY resources within 15 miles (tightened from 25)
+                  const MAX_DISTANCE = 15;
                   matchedOrgs = orgsWithDistance
-                    .filter(({ distance }) => distance < 25)
+                    .filter(({ distance, failed }) => {
+                      if (failed) {
+                        console.log(`Excluding ${failed} - geocoding failed`);
+                        return false;
+                      }
+                      if (distance >= MAX_DISTANCE) {
+                        console.log(`Excluding - too far (${distance} miles)`);
+                        return false;
+                      }
+                      return true;
+                    })
                     .sort((a, b) => a.distance - b.distance)
                     .map(({ org }) => org);
                   
-                  console.log(`Filtered to ${matchedOrgs.length} resources within 25 miles`);
+                  console.log(`FINAL RESULT: ${matchedOrgs.length} resources within ${MAX_DISTANCE} miles`);
+                  
+                  // If no resources found within distance, don't return anything
+                  if (matchedOrgs.length === 0) {
+                    console.log("No resources found within acceptable distance");
+                  }
+                } else {
+                  console.log("WARNING: No user location provided - cannot filter by distance");
+                  // If no location, limit results heavily
+                  matchedOrgs = matchedOrgs.slice(0, 3);
                 }
                 
                 // Apply demographic filters if provided
