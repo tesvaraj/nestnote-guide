@@ -8,80 +8,110 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 210 15% 20%;
+    --background: 24 50% 96%;
+    --foreground: 209 30% 25%;
+    
+    /* Brand gradient colors - matching Figma */
+    --gradient-yellow: 60 100% 93%;
+    --gradient-blue-light: 221 100% 77%;
+    --gradient-blue: 227 100% 63%;
 
     --card: 0 0% 100%;
-    --card-foreground: 210 15% 20%;
+    --card-foreground: 209 30% 25%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 210 15% 20%;
+    --popover-foreground: 209 30% 25%;
 
-    --primary: 184 77% 42%;
+    --primary: 209 50% 48%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 17% 95%;
-    --secondary-foreground: 210 15% 20%;
+    --secondary: 209 35% 92%;
+    --secondary-foreground: 209 30% 25%;
 
-    --muted: 210 17% 95%;
-    --muted-foreground: 210 12% 50%;
+    --muted: 209 25% 94%;
+    --muted-foreground: 209 20% 50%;
 
-    --accent: 25 95% 62%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 200 40% 68%;
+    --accent-foreground: 209 30% 25%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 90%;
-    --input: 210 20% 90%;
-    --ring: 184 77% 42%;
+    --border: 209 30% 88%;
+    --input: 209 30% 88%;
+    --ring: 209 50% 48%;
 
-    --radius: 0.75rem;
-
-    --citation: 184 77% 42%;
-    --citation-hover: 184 77% 35%;
+    --radius: 1rem;
     
-    --panel-border: 210 20% 88%;
+    /* Custom tokens for form design */
+    --section-bg: 0 0% 100%;
+    --form-label: 209 25% 35%;
+    --helper-text: 209 15% 55%;
     
-    --chat-user: 184 60% 96%;
-    --chat-assistant: 0 0% 98%;
+    /* Glass effect tokens */
+    --glass-bg: 0 0% 100%;
+    --glass-border: 209 20% 85%;
+    --glass-text: 209 30% 25%;
 
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    --background: 210 20% 10%;
-    --foreground: 210 20% 95%;
-
-    --card: 210 20% 12%;
-    --card-foreground: 210 20% 95%;
-
-    --popover: 210 20% 12%;
-    --popover-foreground: 210 20% 95%;
-
-    --primary: 184 77% 52%;
-    --primary-foreground: 210 20% 10%;
-
-    --secondary: 210 15% 18%;
-    --secondary-foreground: 210 20% 95%;
-
-    --muted: 210 15% 18%;
-    --muted-foreground: 210 15% 65%;
-
-    --accent: 25 95% 62%;
-    --accent-foreground: 210 20% 10%;
-
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 20% 95%;
-
-    --border: 210 15% 20%;
-    --input: 210 15% 20%;
-    --ring: 184 77% 52%;
-
-    --panel-border: 210 15% 22%;
+    --background: 24 50% 96%;
+    --foreground: 209 30% 25%;
     
-    --chat-user: 184 40% 20%;
-    --chat-assistant: 210 15% 15%;
+    --gradient-yellow: 60 100% 93%;
+    --gradient-blue-light: 221 100% 77%;
+    --gradient-blue: 227 100% 63%;
+
+    --card: 209 25% 18%;
+    --card-foreground: 209 20% 90%;
+
+    --popover: 209 25% 18%;
+    --popover-foreground: 209 20% 90%;
+
+    --primary: 209 50% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 209 20% 22%;
+    --secondary-foreground: 209 20% 90%;
+
+    --muted: 209 20% 25%;
+    --muted-foreground: 209 15% 65%;
+
+    --accent: 200 40% 68%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 209 20% 28%;
+    --input: 209 20% 28%;
+    --ring: 209 50% 48%;
+    
+    --section-bg: 209 25% 18%;
+    --form-label: 209 15% 75%;
+    --helper-text: 209 10% 60%;
+    
+    --glass-bg: 209 25% 15%;
+    --glass-border: 209 20% 30%;
+    --glass-text: 209 20% 90%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -92,5 +122,25 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .noise-overlay {
+    position: relative;
+  }
+  
+  .noise-overlay::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='4' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.15;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+    z-index: 1;
   }
 }
