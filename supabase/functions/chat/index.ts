@@ -306,16 +306,16 @@ Remember: You're not just providing information - you're supporting someone thro
                 }
                 
                 // Filter organizations based on user criteria
-                let matchedOrgs = category.organizations;
+                let matchedOrgs: any[] = category.organizations;
                 
                 // Apply filters if provided
                 if (Object.keys(userFilters).length > 0) {
-                  matchedOrgs = matchedOrgs.filter(org => {
+                  matchedOrgs = matchedOrgs.filter((org: any) => {
                     let matches = true;
                     
                     // For each filter, check if org meets the criteria
                     for (const [key, value] of Object.entries(userFilters)) {
-                      if (value === true && org[key as keyof typeof org] !== true) {
+                      if (value === true && org[key] !== true) {
                         matches = false;
                         break;
                       }
@@ -326,7 +326,7 @@ Remember: You're not just providing information - you're supporting someone thro
                 }
                 
                 // Score and rank by number of matching services
-                const scoredOrgs = matchedOrgs.map(org => {
+                const scoredOrgs = matchedOrgs.map((org: any) => {
                   let score = 0;
                   const matchedServices: string[] = [];
                   
@@ -375,7 +375,7 @@ Remember: You're not just providing information - you're supporting someone thro
                   type: category.service_name,
                   address: org.address || "Address not listed - please call for location",
                   phone: org.phone || "Call 2-1-1 for contact info",
-                  hours: org.hours_of_operation || "Contact for hours",
+                  hours: (org as any).hours_of_operation || "Contact for hours",
                   matchReason: matchedServices.length > 0 
                     ? `Serves ${matchedServices.join(", ")}` 
                     : `${category.service_name} in Sacramento area`
@@ -397,7 +397,7 @@ Remember: You're not just providing information - you're supporting someone thro
                 const resourceUuid = toolCall.args?.resource_uuid;
                 
                 // Find the organization across all categories
-                let foundOrg = null;
+                let foundOrg: any = null;
                 let foundCategory = null;
                 
                 for (const category of resourcesData) {
