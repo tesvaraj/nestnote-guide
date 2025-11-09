@@ -8,51 +8,6 @@ const corsHeaders = {
 
 console.log(`Loaded ${resourcesData.length} service categories from JSON`);
 
-// ADK Integration Helper
-async function tryAdkAgent(messages: any[], sessionId: string): Promise<Response | null> {
-  const ADK_SERVICE_URL = Deno.env.get("ADK_SERVICE_URL");
-  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-  
-  if (!ADK_SERVICE_URL) {
-    console.log("ADK_SERVICE_URL not configured, skipping ADK");
-    return null;
-  }
-
-  try {
-    console.log("Attempting to use ADK agent at:", ADK_SERVICE_URL);
-    
-    const lastUserMessage = messages[messages.length - 1]?.content || "";
-    
-    const response = await fetch(`${ADK_SERVICE_URL}/query`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GEMINI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        session_id: sessionId,
-        message: lastUserMessage,
-        stream: true,
-        context: {
-          resource_categories: resourcesData.map(cat => cat.service_name),
-          total_organizations: resourcesData.reduce((sum, cat) => sum + cat.organizations.length, 0)
-        }
-      }),
-      signal: AbortSignal.timeout(5000) // 5 second timeout
-    });
-
-    if (response.ok) {
-      console.log("ADK agent responded successfully");
-      return response;
-    } else {
-      console.error("ADK agent error:", response.status, await response.text());
-      return null;
-    }
-  } catch (error) {
-    console.error("ADK agent failed:", error);
-    return null;
-  }
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -68,23 +23,6 @@ serve(async (req) => {
     }
 
     console.log("Chat request received with", messages.length, "messages");
-
-    // Generate or extract session ID
-    const sessionId = crypto.randomUUID();
-
-    // TRY ADK FIRST
-    const adkResponse = await tryAdkAgent(messages, sessionId);
-    
-    if (adkResponse) {
-      console.log("Using ADK agent for this request");
-      // ADK returned a valid response, stream it back
-      return new Response(adkResponse.body, {
-        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-      });
-    }
-
-    // FALLBACK TO GEMINI
-    console.log("Falling back to direct Gemini API");
 
     // Check if this is a resource search query or detail request
     const lastMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
