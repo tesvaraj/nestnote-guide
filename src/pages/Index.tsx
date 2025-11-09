@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SourcesPanel } from "@/features/resources/components/SourcesPanel";
 import { ChatPanel } from "@/features/chat/components/ChatPanel";
@@ -8,6 +8,7 @@ import { SavedResource } from "@/features/resources/types";
 import GradientBackground from "@/components/GradientBackground";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import IntakeForm from "@/components/IntakeForm";
+import UpdateProfile from "@/components/UpdateProfile";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
@@ -17,6 +18,7 @@ const Index = () => {
   const [showWelcome, setShowWelcome] = useState(true);
   const [showIntakeForm, setShowIntakeForm] = useState(false);
   const [hasProfile, setHasProfile] = useState(false);
+  const [showUpdateProfile, setShowUpdateProfile] = useState(false);
 
   useEffect(() => {
     checkProfile();
@@ -101,15 +103,30 @@ const Index = () => {
               Haven
             </h1>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setRightPanelOpen(!rightPanelOpen)}
-            className="lg:hidden text-white hover:bg-white/20"
-          >
-            {rightPanelOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowUpdateProfile(true)}
+              className="text-white hover:bg-white/20"
+              title="Update Profile"
+            >
+              <User className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setRightPanelOpen(!rightPanelOpen)}
+              className="lg:hidden text-white hover:bg-white/20"
+            >
+              {rightPanelOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
         </header>
+
+        {/* Update Profile Dialog */}
+        <UpdateProfile open={showUpdateProfile} onOpenChange={setShowUpdateProfile} />
 
         {/* Three-panel layout */}
         <div className="flex-1 flex overflow-hidden">
