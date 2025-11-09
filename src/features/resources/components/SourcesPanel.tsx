@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { SavedResource } from "@/features/resources/types";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface SourcesPanelProps {
   savedResources: SavedResource[];
@@ -29,10 +31,31 @@ export const SourcesPanel = ({ savedResources, onRemoveResource }: SourcesPanelP
     setDeleteDialogOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (selectedResource) {
-      // Here you could save the feedback to a database if needed
-      console.log("Feedback:", { resourceId: selectedResource.id, interacted, feedback });
+      // Save feedback to database
+      const { error } = await supabase
+        .from('resource_feedback')
+        .insert({
+          resource_id: selectedResource.id,
+          resource_name: selectedResource.name,
+          feedback_data: {
+            interacted,
+            feedback,
+            resource_type: selectedResource.type,
+            timestamp: new Date().toISOString()
+          }
+        });
+
+      if (error) {
+        console.error("Error saving feedback:", error);
+        toast({
+          title: "Error",
+          description: "Failed to save feedback, but resource will be removed.",
+          variant: "destructive"
+        });
+      }
+
       onRemoveResource(selectedResource.id);
       setDeleteDialogOpen(false);
       setSelectedResource(null);
