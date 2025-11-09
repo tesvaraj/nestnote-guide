@@ -20,5 +20,5 @@ run_local.sh
 deploy.sh
 .dockerignore
 check_service.sh
-*.sh
+start.sh
 
