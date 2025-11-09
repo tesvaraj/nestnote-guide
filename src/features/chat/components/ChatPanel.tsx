@@ -204,7 +204,7 @@ export const ChatPanel = ({ savedResources, onSaveResource }: ChatPanelProps) =>
         <div>
           <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            Chat with Cove
+            Chat with Haven
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
             Ask me anything about available resources. I'm here to support you.
