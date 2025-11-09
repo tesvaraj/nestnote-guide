@@ -9,6 +9,7 @@ import GradientBackground from "@/components/GradientBackground";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import IntakeForm from "@/components/IntakeForm";
 import UpdateProfile from "@/components/UpdateProfile";
+import SetLocation from "@/components/SetLocation";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
@@ -19,6 +20,8 @@ const Index = () => {
   const [showIntakeForm, setShowIntakeForm] = useState(false);
   const [hasProfile, setHasProfile] = useState(false);
   const [showUpdateProfile, setShowUpdateProfile] = useState(false);
+  const [showSetLocation, setShowSetLocation] = useState(false);
+  const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
 
   useEffect(() => {
     checkProfile();
@@ -127,6 +130,13 @@ const Index = () => {
 
         {/* Update Profile Dialog */}
         <UpdateProfile open={showUpdateProfile} onOpenChange={setShowUpdateProfile} />
+        
+        {/* Set Location Dialog */}
+        <SetLocation 
+          open={showSetLocation} 
+          onOpenChange={setShowSetLocation}
+          onLocationSet={setLocation}
+        />
 
         {/* Three-panel layout */}
         <div className="flex-1 flex overflow-hidden">
@@ -161,7 +171,11 @@ const Index = () => {
               ${rightPanelOpen ? "block" : "hidden lg:block lg:w-0"}
             `}
           >
-            <CardsPanel onUpdateProfile={() => setShowUpdateProfile(true)} />
+            <CardsPanel 
+              onUpdateProfile={() => setShowUpdateProfile(true)}
+              onSetLocation={() => setShowSetLocation(true)}
+              location={location}
+            />
           </div>
         </div>
 

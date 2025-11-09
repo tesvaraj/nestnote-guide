@@ -10,9 +10,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CardsPanelProps {
   onUpdateProfile?: () => void;
+  onSetLocation?: () => void;
+  location?: { lat: number; lng: number; address: string } | null;
 }
 
-export const CardsPanel = ({ onUpdateProfile }: CardsPanelProps) => {
+export const CardsPanel = ({ onUpdateProfile, onSetLocation, location }: CardsPanelProps) => {
   return (
     <div className="h-full flex flex-col bg-background">
       <div className="p-4 border-b border-panel-border">
@@ -61,15 +63,17 @@ export const CardsPanel = ({ onUpdateProfile }: CardsPanelProps) => {
                 Location
               </CardTitle>
               <CardDescription className="text-xs">
-                Not set
+                {location ? location.address.split(',').slice(0, 2).join(',') : 'Not set'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-3">
-                Set your location to find nearby resources
+                {location 
+                  ? "Update your location to find different nearby resources" 
+                  : "Set your location to find nearby resources"}
               </p>
-              <Button variant="outline" size="sm" className="w-full">
-                Set Location
+              <Button variant="outline" size="sm" className="w-full" onClick={onSetLocation}>
+                {location ? "Change Location" : "Set Location"}
               </Button>
             </CardContent>
           </Card>
@@ -82,21 +86,36 @@ export const CardsPanel = ({ onUpdateProfile }: CardsPanelProps) => {
                 Available Beds
               </CardTitle>
               <CardDescription className="text-xs">
-                Near you
+                {location ? "Near your location" : "Set location to see distances"}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Emergency</span>
+                  <div className="flex-1">
+                    <span className="text-sm text-muted-foreground">Emergency Shelter</span>
+                    {location && (
+                      <p className="text-xs text-muted-foreground/70">0.8 miles away</p>
+                    )}
+                  </div>
                   <Badge variant="secondary">12 beds</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Youth</span>
+                  <div className="flex-1">
+                    <span className="text-sm text-muted-foreground">Youth Shelter</span>
+                    {location && (
+                      <p className="text-xs text-muted-foreground/70">1.2 miles away</p>
+                    )}
+                  </div>
                   <Badge variant="secondary">5 beds</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Family</span>
+                  <div className="flex-1">
+                    <span className="text-sm text-muted-foreground">Family Shelter</span>
+                    {location && (
+                      <p className="text-xs text-muted-foreground/70">2.5 miles away</p>
+                    )}
+                  </div>
                   <Badge variant="secondary">3 beds</Badge>
                 </div>
                 <Button variant="outline" size="sm" className="w-full mt-3">
