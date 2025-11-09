@@ -14,6 +14,132 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          additional_info: string | null
+          adults_independent_care: boolean | null
+          age: string | null
+          children_under_five: boolean | null
+          created_at: string | null
+          custody_requires_housing: boolean | null
+          disabilities: string | null
+          disability_details: string | null
+          education: string | null
+          eviction_past_seven_years: boolean | null
+          foster_care_after_16: boolean | null
+          has_children: boolean | null
+          has_custody: boolean | null
+          has_housing_voucher: boolean | null
+          has_trusted_contacts: boolean | null
+          health_concerns: string | null
+          health_details: string | null
+          homeless_over_year: boolean | null
+          household_disability: boolean | null
+          household_pregnant: boolean | null
+          housing_accommodations: string[] | null
+          housing_application_opt_in: boolean | null
+          housing_search_type: string | null
+          housing_situation: string | null
+          id: string
+          immediate_needs: string[] | null
+          immigration_status_prevented_housing: boolean | null
+          justice_system_prevented_housing: boolean | null
+          mental_health_crisis: boolean | null
+          monthly_income: string | null
+          name: string
+          physical_health_crisis: boolean | null
+          poor_credit_prevented_housing: boolean | null
+          sex_offender_registry: boolean | null
+          single_parent_household: boolean | null
+          updated_at: string | null
+          user_id: string
+          violence_trauma: boolean | null
+          where_sleep_frequently: string | null
+        }
+        Insert: {
+          additional_info?: string | null
+          adults_independent_care?: boolean | null
+          age?: string | null
+          children_under_five?: boolean | null
+          created_at?: string | null
+          custody_requires_housing?: boolean | null
+          disabilities?: string | null
+          disability_details?: string | null
+          education?: string | null
+          eviction_past_seven_years?: boolean | null
+          foster_care_after_16?: boolean | null
+          has_children?: boolean | null
+          has_custody?: boolean | null
+          has_housing_voucher?: boolean | null
+          has_trusted_contacts?: boolean | null
+          health_concerns?: string | null
+          health_details?: string | null
+          homeless_over_year?: boolean | null
+          household_disability?: boolean | null
+          household_pregnant?: boolean | null
+          housing_accommodations?: string[] | null
+          housing_application_opt_in?: boolean | null
+          housing_search_type?: string | null
+          housing_situation?: string | null
+          id?: string
+          immediate_needs?: string[] | null
+          immigration_status_prevented_housing?: boolean | null
+          justice_system_prevented_housing?: boolean | null
+          mental_health_crisis?: boolean | null
+          monthly_income?: string | null
+          name: string
+          physical_health_crisis?: boolean | null
+          poor_credit_prevented_housing?: boolean | null
+          sex_offender_registry?: boolean | null
+          single_parent_household?: boolean | null
+          updated_at?: string | null
+          user_id: string
+          violence_trauma?: boolean | null
+          where_sleep_frequently?: string | null
+        }
+        Update: {
+          additional_info?: string | null
+          adults_independent_care?: boolean | null
+          age?: string | null
+          children_under_five?: boolean | null
+          created_at?: string | null
+          custody_requires_housing?: boolean | null
+          disabilities?: string | null
+          disability_details?: string | null
+          education?: string | null
+          eviction_past_seven_years?: boolean | null
+          foster_care_after_16?: boolean | null
+          has_children?: boolean | null
+          has_custody?: boolean | null
+          has_housing_voucher?: boolean | null
+          has_trusted_contacts?: boolean | null
+          health_concerns?: string | null
+          health_details?: string | null
+          homeless_over_year?: boolean | null
+          household_disability?: boolean | null
+          household_pregnant?: boolean | null
+          housing_accommodations?: string[] | null
+          housing_application_opt_in?: boolean | null
+          housing_search_type?: string | null
+          housing_situation?: string | null
+          id?: string
+          immediate_needs?: string[] | null
+          immigration_status_prevented_housing?: boolean | null
+          justice_system_prevented_housing?: boolean | null
+          mental_health_crisis?: boolean | null
+          monthly_income?: string | null
+          name?: string
+          physical_health_crisis?: boolean | null
+          poor_credit_prevented_housing?: boolean | null
+          sex_offender_registry?: boolean | null
+          single_parent_household?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+          violence_trauma?: boolean | null
+          where_sleep_frequently?: string | null
+        }
+        Relationships: []
+      }
       resource_feedback: {
         Row: {
           created_at: string
