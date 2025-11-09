@@ -126,8 +126,8 @@ export default function IntakeForm({ onComplete, initialUserMessage }: IntakeFor
 
   const handleContinue = () => {
     // Skip housing application questions if user opted out
-    if (step === 8 && formData.housingApplicationOptIn === "no") {
-      setStep(31); // Jump to health questions
+    if (step === 9 && formData.housingApplicationOptIn === "no") {
+      setStep(32); // Jump to health questions
     } else {
       setStep((prev) => prev + 1);
     }
@@ -135,17 +135,17 @@ export default function IntakeForm({ onComplete, initialUserMessage }: IntakeFor
 
   const handleSkip = () => {
     // Skip housing application questions if user opted out
-    if (step === 8 && formData.housingApplicationOptIn === "no") {
-      setStep(31); // Jump to health questions
+    if (step === 9 && formData.housingApplicationOptIn === "no") {
+      setStep(32); // Jump to health questions
     } else {
       setStep((prev) => prev + 1);
     }
   };
 
   const handleBack = () => {
-    // If coming back from health questions (step 31) and user had opted out, go back to step 8
-    if (step === 31 && formData.housingApplicationOptIn === "no") {
-      setStep(8);
+    // If coming back from health questions (step 32) and user had opted out, go back to step 9
+    if (step === 32 && formData.housingApplicationOptIn === "no") {
+      setStep(9);
     } else {
       setStep((prev) => prev - 1);
     }
@@ -179,14 +179,14 @@ export default function IntakeForm({ onComplete, initialUserMessage }: IntakeFor
   };
 
   // Steps that need content warnings (sensitive topics)
-  // Steps 9-30 are housing application questions, only show warning if user opted in
-  const housingApplicationSensitiveSteps = [9, 10, 11, 16, 25, 26, 27, 28, 29, 30];
+  // Steps 10-31 are housing application questions, only show warning if user opted in
+  const housingApplicationSensitiveSteps = [10, 11, 12, 17, 26, 27, 28, 29, 30, 31];
   const isSensitiveStep = formData.housingApplicationOptIn === "yes" && housingApplicationSensitiveSteps.includes(step);
 
   // Calculate total steps and progress
   // Adjust current step if we skipped the housing application section
-  const totalSteps = formData.housingApplicationOptIn === "no" ? 13 : 35;
-  const adjustedStep = formData.housingApplicationOptIn === "no" && step > 8 ? step - 22 : step;
+  const totalSteps = formData.housingApplicationOptIn === "no" ? 14 : 36;
+  const adjustedStep = formData.housingApplicationOptIn === "no" && step > 9 ? step - 22 : step;
   const progressPercentage = (adjustedStep / totalSteps) * 100;
 
   if (isPaused) {
@@ -235,7 +235,7 @@ export default function IntakeForm({ onComplete, initialUserMessage }: IntakeFor
       <div className="max-w-2xl w-full">
         <div className="flex justify-between items-center mb-4">
           <Heart className="w-10 h-10 text-white fill-white drop-shadow-lg" />
-          {step > 7 && (
+          {step > 8 && (
             <Button variant="outline" size="sm" onClick={handlePause} className="gap-2">
               <Pause className="h-4 w-4" />
               Pause
@@ -284,22 +284,53 @@ export default function IntakeForm({ onComplete, initialUserMessage }: IntakeFor
           </div>
         )}
 
-        {/* Step 2: Age */}
+        {/* Step 2: Profile Consent */}
         {step === 2 && (
+          <div className="space-y-8 text-center animate-in fade-in duration-500">
+            <div className="space-y-3">
+              <h2 className="text-4xl md:text-5xl font-light text-white drop-shadow-lg">
+                In order for us to find the most relevant resources for you, we need to ask you a couple of questions to build a digital profile.
+              </h2>
+              <p className="text-white/90 text-lg drop-shadow">Is that okay?</p>
+            </div>
+            <div className="max-w-md mx-auto space-y-4">
+              <div className="flex flex-col gap-3">
+                <Button onClick={handleContinue} className="w-full h-12 text-lg">
+                  Sure, I can answer a few questions
+                </Button>
+                <Button onClick={handleContinueAsGuest} variant="outline" className="w-full h-12 text-lg">
+                  Not right now, continue as a guest
+                </Button>
+              </div>
+              <div className="pt-2">
+                <Button variant="ghost" onClick={handleBack} className="h-12 text-lg">
+                  Back
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Age */}
+        {step === 3 && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
               <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">How old are you?</h2>
               <p className="text-white/90 text-lg drop-shadow">This helps us match you with age-specific programs.</p>
             </div>
             <div className="max-w-md mx-auto space-y-4">
-              <Input
-                type="number"
-                value={formData.age}
-                onChange={(e) => updateFormData("age", e.target.value)}
-                placeholder="Your age"
-                className="text-lg h-12 text-center"
-                autoFocus
-              />
+              <div className="flex justify-end">
+                <div className="bg-chat-user text-foreground rounded-2xl rounded-tr-sm px-4 py-3 max-w-sm">
+                  <Input
+                    type="number"
+                    value={formData.age}
+                    onChange={(e) => updateFormData("age", e.target.value)}
+                    placeholder="Your age"
+                    className="text-lg h-12 text-center bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0"
+                    autoFocus
+                  />
+                </div>
+              </div>
               <div className="flex gap-3">
                 <Button variant="outline" onClick={handleBack} className="h-12 text-lg px-6">
                   Back
@@ -317,8 +348,8 @@ export default function IntakeForm({ onComplete, initialUserMessage }: IntakeFor
           </div>
         )}
 
-        {/* Step 3: Housing Situation */}
-        {step === 3 && (
+        {/* Step 4: Housing Situation */}
+        {step === 4 && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
               <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
@@ -371,8 +402,8 @@ export default function IntakeForm({ onComplete, initialUserMessage }: IntakeFor
           </div>
         )}
 
-        {/* Step 4: Immediate Needs */}
-        {step === 4 && (
+        {/* Step 5: Immediate Needs */}
+        {step === 5 && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
               <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
@@ -422,33 +453,6 @@ export default function IntakeForm({ onComplete, initialUserMessage }: IntakeFor
                     Continue
                   </Button>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 5: Profile Consent */}
-        {step === 5 && (
-          <div className="space-y-8 text-center animate-in fade-in duration-500">
-            <div className="space-y-3">
-              <h2 className="text-4xl md:text-5xl font-light text-white drop-shadow-lg">
-                In order for us to find the most relevant resources for you, we need to ask you a couple of questions to build a digital profile.
-              </h2>
-              <p className="text-white/90 text-lg drop-shadow">Is that okay?</p>
-            </div>
-            <div className="max-w-md mx-auto space-y-4">
-              <div className="flex flex-col gap-3">
-                <Button onClick={handleContinue} className="w-full h-12 text-lg">
-                  Sure, I can answer a few questions
-                </Button>
-                <Button onClick={handleContinueAsGuest} variant="outline" className="w-full h-12 text-lg">
-                  Not right now, continue as a guest
-                </Button>
-              </div>
-              <div className="pt-2">
-                <Button variant="ghost" onClick={handleBack} className="h-12 text-lg">
-                  Back
-                </Button>
               </div>
             </div>
           </div>
