@@ -57,6 +57,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             messages,
+            userLocation,  // Pass user location to ADK service
             stream: true,
           }),
         });

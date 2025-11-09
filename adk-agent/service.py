@@ -187,6 +187,7 @@ def query():
         messages = data.get('messages', [])
         session_id = data.get('session_id', '')
         stream_mode = data.get('stream', True)
+        user_location = data.get('userLocation')  # Get user location from request
         
         # Extract the last user message if messages array is provided
         if messages and not message:
@@ -201,10 +202,13 @@ def query():
         if not AGENT_LOADED or root_agent is None:
             return jsonify({'error': 'Agent not loaded. Check logs for details.'}), 500
         
-        # Get agent configuration from ADK agent
+        # Get agent configuration from ADK agent with user location
         try:
             from agent import get_system_instruction
-            SYSTEM_INSTRUCTION = get_system_instruction()
+            # Pass user location to get dynamic system instruction
+            location_str = user_location.get('address') if user_location else None
+            SYSTEM_INSTRUCTION = get_system_instruction(user_location=location_str)
+            print(f"Using location: {location_str}")
         except ImportError:
             try:
                 from agent import SYSTEM_INSTRUCTION

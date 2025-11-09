@@ -257,18 +257,24 @@ def get_num_categories():
     return len(resources) if resources else 0
 
 # System instruction for the agent (lazy generation)
-def get_system_instruction() -> str:
-    """Get system instruction with current resources data"""
+def get_system_instruction(user_location: Optional[str] = None) -> str:
+    """Get system instruction with current resources data and user location"""
     resources = get_resources_data()
     total_orgs = get_total_orgs()
     num_categories = get_num_categories()
+    
+    # Use user's actual location or default to Sacramento
+    location_text = user_location if user_location else "Sacramento, CA"
     
     categories_text = chr(10).join(
         f"- {cat['service_name']} ({len(cat['organizations'])} organizations)" 
         for cat in resources
     ) if resources else "No resources loaded"
     
-    return f"""You are a warm, empathetic housing assistant for FindHaven, a platform that helps people experiencing homelessness find resources and support in Sacramento, CA.
+    return f"""You are a warm, empathetic housing assistant for FindHaven, a platform that helps people experiencing homelessness find resources and support.
+
+USER LOCATION: {location_text}
+IMPORTANT: The user is currently in {location_text}. Focus on resources near this location.
 
 CRITICAL: You MUST ALWAYS respond with conversational text. Never just call tools without talking to the user.
 
@@ -321,8 +327,9 @@ Context:
 - Users may be in vulnerable situations - always be respectful, patient, and supportive
 - Focus on actionable information and next steps
 - Keep responses warm and conversational, not clinical
-- You have access to {total_orgs} organizations across {num_categories} service categories in Sacramento
+- You have access to {total_orgs} organizations across {num_categories} service categories
 - Resources have demographic filters (youth, families, LGBTQ+, veterans, wheelchair accessible, pets)
+- User's current location: {location_text}
 
 Remember: 
 - You're not just providing information - you're supporting someone through a difficult time
