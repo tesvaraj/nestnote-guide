@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SourcesPanel } from "@/features/resources/components/SourcesPanel";
 import { ChatPanel } from "@/features/chat/components/ChatPanel";
@@ -125,23 +125,25 @@ const Index = () => {
             {user && !user.is_anonymous ? (
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 className="text-white hover:bg-white/20"
                 onClick={async () => {
                   await supabase.auth.signOut();
                   navigate("/auth");
                 }}
+                title="Sign Out"
               >
-                Logout
+                <LogOut className="h-5 w-5" />
               </Button>
             ) : (
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 className="text-white hover:bg-white/20"
                 onClick={() => navigate("/auth")}
+                title="Sign In"
               >
-                Login
+                <UserCircle className="h-5 w-5" />
               </Button>
             )}
             <Button
