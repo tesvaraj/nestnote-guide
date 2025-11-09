@@ -112,27 +112,27 @@ def get_resource_details(resource_uuid: str) -> Dict:
                 }
     return {}
 
-# Define agent tools using OpenAPI-style schema (google-genai SDK expects this format)
+# Define agent tools using google-genai SDK format
 search_resources_tool = types.Tool(
     function_declarations=[
         types.FunctionDeclaration(
             name='search_local_resources',
             description='Search the local Sacramento resources database for shelters, food services, and support organizations',
             parameters=types.Schema(
-                type='object',
+                type="OBJECT",
                 properties={
                     'service_category': types.Schema(
-                        type='string',
+                        type="STRING",
                         description='Service category: "Homeless Youth Shelters" or "Soup Kitchens"'
                     ),
                     'user_filters': types.Schema(
-                        type='object',
+                        type="OBJECT",
                         description='Demographic and accessibility filters',
                         properties={
-                            'services_youth': types.Schema(type='boolean'),
-                            'services_families': types.Schema(type='boolean'),
-                            'services_lgbtq': types.Schema(type='boolean'),
-                            'wheelchair_accessible': types.Schema(type='boolean'),
+                            'services_youth': types.Schema(type="BOOLEAN"),
+                            'services_families': types.Schema(type="BOOLEAN"),
+                            'services_lgbtq': types.Schema(type="BOOLEAN"),
+                            'wheelchair_accessible': types.Schema(type="BOOLEAN"),
                         }
                     )
                 },
@@ -143,10 +143,10 @@ search_resources_tool = types.Tool(
             name='get_resource_details',
             description='Get detailed information about a specific resource organization',
             parameters=types.Schema(
-                type='object',
+                type="OBJECT",
                 properties={
                     'resource_uuid': types.Schema(
-                        type='string',
+                        type="STRING",
                         description='UUID of the organization'
                     )
                 },
