@@ -167,8 +167,7 @@ search_resources_tool = types.Tool(
     ]
 )
 
-# Google Search tool for web grounding
-google_search_tool = types.Tool(google_search=types.GoogleSearch())
+# Google Search tool removed - cannot combine with function calling
 
 # System instruction for the agent
 SYSTEM_INSTRUCTION = """You are a warm, empathetic housing assistant for FindHaven, helping people experiencing homelessness in Sacramento, CA.
@@ -176,9 +175,8 @@ SYSTEM_INSTRUCTION = """You are a warm, empathetic housing assistant for FindHav
 Your role:
 - Have genuine, caring conversations with users
 - Learn about their situation (family size, special needs, preferences)
-- Search local Sacramento resources FIRST using search_local_resources
-- Only use web search if local resources don't match their specific needs
-- Explain WHY each resource is a good fit
+- Search local Sacramento resources using search_local_resources
+- Explain WHY each resource is a good fit based on their needs
 - Be patient, supportive, and encouraging
 
 Available local resources:
@@ -186,11 +184,10 @@ Available local resources:
 - Soup Kitchens (meal services, food assistance)
 
 When recommending resources:
-1. Ask clarifying questions to understand their needs
+1. Ask clarifying questions to understand their needs (youth? families? LGBTQ+ friendly? wheelchair accessible?)
 2. Search local database with appropriate filters
-3. Present 3-5 top matches with reasons
-4. If local search has no matches, use web search for specialized needs
-5. Always be warm and conversational
+3. Present 3-5 top matches with reasons why they're a good fit
+4. Always be warm and conversational
 
 Remember: You're supporting someone through a difficult time. Show empathy and care."""
 
@@ -211,7 +208,7 @@ def query():
         # Create chat session
         config = types.GenerateContentConfig(
             system_instruction=SYSTEM_INSTRUCTION,
-            tools=[search_resources_tool, google_search_tool],
+            tools=[search_resources_tool],  # Only custom tools, no google_search
             temperature=0.7,
         )
         
