@@ -93,6 +93,39 @@ def search_local_resources(
     # Filter organizations
     matched_orgs = category['organizations']
     
+    # CRITICAL: STRICT address validation - exclude ANYTHING without a complete address
+    def has_valid_address(org):
+        address = org.get('address', '').strip()
+        if not address:
+            return False
+        
+        # Must not contain invalid indicators
+        invalid_indicators = ['not listed', 'n/a', 'various', 'call for', 'contact for', 'tbd', 'see website']
+        address_lower = address.lower()
+        for indicator in invalid_indicators:
+            if indicator in address_lower:
+                return False
+        
+        # Must have a street number
+        import re
+        if not re.search(r'\d', address):
+            return False
+        
+        return True
+    
+    # Filter out resources without valid addresses
+    matched_orgs = [org for org in matched_orgs if has_valid_address(org)]
+    
+    # CRITICAL: Filter out ALL animal-related services - NEVER relevant for human housing
+    def is_animal_service(org):
+        org_name = (org.get('organization', '') or '').lower()
+        org_desc = (org.get('description', '') or '').lower()
+        
+        animal_keywords = ['animal', 'pet', 'tails', 'sanctuary', 'rescue', 'cats and dogs']
+        return any(keyword in org_name or keyword in org_desc for keyword in animal_keywords)
+    
+    matched_orgs = [org for org in matched_orgs if not is_animal_service(org)]
+    
     # Apply demographic filters
     if user_filters:
         matched_orgs = [
