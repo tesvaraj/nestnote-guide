@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      geocode_cache: {
+        Row: {
+          address: string
+          cached_at: string
+          created_at: string
+          display_name: string | null
+          id: string
+          latitude: number
+          longitude: number
+        }
+        Insert: {
+          address: string
+          cached_at?: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          latitude: number
+          longitude: number
+        }
+        Update: {
+          address?: string
+          cached_at?: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          latitude?: number
+          longitude?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           additional_info: string | null

@@ -398,38 +398,86 @@ Context: You have access to ${totalOrgs} organizations across ${resourcesData.le
                 if (userLocation?.lat && userLocation?.lng) {
                   console.log("Calculating distances from user location:", userLocation);
                   
+                  // Initialize Supabase client for geocoding cache
+                  const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+                  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+                  
                   // Geocode each resource and calculate distance
                   const orgsWithDistance = await Promise.all(
                     matchedOrgs.map(async (org: any) => {
                       if (!org.address) return { org, distance: 999 };
                       
                       try {
-                        // Geocode the resource address
-                        const geocodeResp = await fetch(
-                          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(org.address)}&format=json&limit=1`
-                        );
-                        const geocodeData = await geocodeResp.json();
+                        let resourceLat: number;
+                        let resourceLon: number;
                         
-                        if (Array.isArray(geocodeData) && geocodeData.length > 0) {
-                          const resourceLat = parseFloat(geocodeData[0].lat);
-                          const resourceLon = parseFloat(geocodeData[0].lon);
-                          
-                          // Calculate distance using Haversine formula
-                          const distance = calculateDistance(
-                            userLocation.lat,
-                            userLocation.lng,
-                            resourceLat,
-                            resourceLon
+                        // Check cache first
+                        const cacheResp = await fetch(
+                          `${SUPABASE_URL}/rest/v1/geocode_cache?address=eq.${encodeURIComponent(org.address)}&select=latitude,longitude`,
+                          {
+                            headers: {
+                              'apikey': SUPABASE_SERVICE_ROLE_KEY || '',
+                              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+                            }
+                          }
+                        );
+                        const cacheData = await cacheResp.json();
+                        
+                        if (Array.isArray(cacheData) && cacheData.length > 0) {
+                          // Use cached coordinates
+                          resourceLat = cacheData[0].latitude;
+                          resourceLon = cacheData[0].longitude;
+                          console.log(`Using cached location for ${org.organization}`);
+                        } else {
+                          // Geocode the resource address via API
+                          const geocodeResp = await fetch(
+                            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(org.address)}&format=json&limit=1`
                           );
+                          const geocodeData = await geocodeResp.json();
                           
-                          console.log(`Distance to ${org.organization}: ${distance} miles`);
-                          return { org, distance };
+                          if (Array.isArray(geocodeData) && geocodeData.length > 0) {
+                            resourceLat = parseFloat(geocodeData[0].lat);
+                            resourceLon = parseFloat(geocodeData[0].lon);
+                            
+                            // Store in cache for future use
+                            await fetch(
+                              `${SUPABASE_URL}/rest/v1/geocode_cache`,
+                              {
+                                method: 'POST',
+                                headers: {
+                                  'apikey': SUPABASE_SERVICE_ROLE_KEY || '',
+                                  'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                                  'Content-Type': 'application/json',
+                                  'Prefer': 'return=minimal'
+                                },
+                                body: JSON.stringify({
+                                  address: org.address,
+                                  latitude: resourceLat,
+                                  longitude: resourceLon,
+                                  display_name: geocodeData[0].display_name
+                                })
+                              }
+                            );
+                            console.log(`Cached location for ${org.organization}`);
+                          } else {
+                            return { org, distance: 999 };
+                          }
                         }
+                        
+                        // Calculate distance using Haversine formula
+                        const distance = calculateDistance(
+                          userLocation.lat,
+                          userLocation.lng,
+                          resourceLat,
+                          resourceLon
+                        );
+                        
+                        console.log(`Distance to ${org.organization}: ${distance} miles`);
+                        return { org, distance };
                       } catch (e) {
                         console.error(`Failed to geocode ${org.organization}:`, e);
+                        return { org, distance: 999 };
                       }
-                      
-                      return { org, distance: 999 }; // Unknown distance
                     })
                   );
                   
