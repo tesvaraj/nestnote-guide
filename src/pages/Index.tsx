@@ -33,7 +33,7 @@ const Index = () => {
             {leftPanelOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
           <h1 className="text-xl font-bold text-foreground">
-            Nest<span className="text-primary">Note</span>
+            Find<span className="text-primary">Haven</span>
           </h1>
         </div>
         <Button
