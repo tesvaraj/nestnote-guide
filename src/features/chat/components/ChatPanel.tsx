@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { SavedResource } from "@/features/resources/types";
 import { Message, Recommendation } from "@/features/chat/types";
+import { calculateDistance } from "@/lib/distanceUtils";
 
 const quickReplies = [
   "Find bed",
@@ -33,12 +34,14 @@ const initialMessages: Message[] = [
 interface ChatPanelProps {
   savedResources: SavedResource[];
   onSaveResource: (resource: SavedResource) => void;
+  location?: { lat: number; lng: number; address: string } | null;
 }
 
-export const ChatPanel = ({ savedResources, onSaveResource }: ChatPanelProps) => {
+export const ChatPanel = ({ savedResources, onSaveResource, location }: ChatPanelProps) => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [recDistances, setRecDistances] = useState<Record<string, number>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -50,6 +53,57 @@ export const ChatPanel = ({ savedResources, onSaveResource }: ChatPanelProps) =>
   const isResourceSaved = (resourceId: string) => {
     return savedResources.some(r => r.id === resourceId);
   };
+
+  // Calculate distances for recommendations
+  useEffect(() => {
+    if (!location) return;
+
+    const allRecs = messages
+      .filter(m => m.role === 'assistant' && m.recommendations)
+      .flatMap(m => m.recommendations || []);
+
+    const toFetch = allRecs.filter((r) => recDistances[r.id] === undefined && r.address);
+    if (toFetch.length === 0) return;
+
+    let cancelled = false;
+
+    const fetchDistances = async () => {
+      const entries: [string, number | null][] = await Promise.all(
+        toFetch.map(async (r) => {
+          try {
+            const resp = await fetch(
+              `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(r.address)}&format=json&limit=1`
+            );
+            const data = await resp.json();
+            if (Array.isArray(data) && data.length > 0) {
+              const lat = parseFloat(data[0].lat);
+              const lon = parseFloat(data[0].lon);
+              const miles = calculateDistance(location.lat, location.lng, lat, lon);
+              return [r.id, miles] as [string, number];
+            }
+            return [r.id, null];
+          } catch (e) {
+            return [r.id, null];
+          }
+        })
+      );
+
+      if (!cancelled) {
+        setRecDistances((prev) => {
+          const next = { ...prev } as Record<string, number>;
+          for (const [id, dist] of entries) {
+            if (dist != null) next[id] = dist;
+          }
+          return next;
+        });
+      }
+    };
+
+    fetchDistances();
+    return () => {
+      cancelled = true;
+    };
+  }, [messages, location]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -263,6 +317,14 @@ export const ChatPanel = ({ savedResources, onSaveResource }: ChatPanelProps) =>
                             <div className="flex items-start gap-2">
                               <Clock className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
                               <span className="text-foreground">{rec.hours}</span>
+                            </div>
+                          )}
+                          {location && recDistances[rec.id] !== undefined && (
+                            <div className="flex items-center gap-2 pl-5">
+                              <MapPin className="h-3.5 w-3.5 text-primary" />
+                              <span className="text-foreground font-medium">
+                                Number of miles is: {recDistances[rec.id].toFixed(1)} mi
+                              </span>
                             </div>
                           )}
                           <div className="mt-2 pt-2 border-t border-border">

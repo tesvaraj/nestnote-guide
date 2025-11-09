@@ -181,10 +181,11 @@ const Index = () => {
 
           {/* Middle Panel - Chat */}
           <div className="flex-1 min-w-0 border-r border-panel-border">
-            <ChatPanel 
-              savedResources={savedResources}
-              onSaveResource={handleSaveResource}
-            />
+              <ChatPanel 
+                savedResources={savedResources}
+                onSaveResource={handleSaveResource}
+                location={location}
+              />
           </div>
 
           {/* Right Panel - Cards */}
