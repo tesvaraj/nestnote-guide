@@ -224,6 +224,7 @@ def query():
                                     results = search_local_resources(**func_call.args)
                                     # Format as recommendations
                                     recommendations = []
+                                    service_category = func_call.args.get('service_category', 'Resource')
                                     for item in results:
                                         org = item['org']
                                         recommendations.append({
