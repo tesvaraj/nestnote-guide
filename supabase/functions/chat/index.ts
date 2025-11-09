@@ -1,6 +1,29 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import resourcesData from "./resources-data.json" with { type: "json" };
 
+// Calculate distance between two coordinates using Haversine formula
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3959; // Earth's radius in miles
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+  
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c;
+  
+  return Math.round(distance * 10) / 10; // Round to 1 decimal place
+}
+
+function toRadians(degrees: number): number {
+  return degrees * (Math.PI / 180);
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -371,32 +394,59 @@ Context: You have access to ${totalOrgs} organizations across ${resourcesData.le
                          !address.toLowerCase().includes('call for');
                 });
                 
-                // Filter by location proximity if userLocation is provided
+                // Calculate distances and filter by proximity if userLocation is provided
                 if (userLocation?.lat && userLocation?.lng) {
-                  matchedOrgs = matchedOrgs.filter((org: any) => {
-                    if (!org.address) return true;
-                    
-                    const address = (org.address || '').toLowerCase();
-                    
-                    // Always include Sacramento addresses
-                    if (address.includes('sacramento, ca')) return true;
-                    
-                    // Exclude Placerville (60+ miles away), Elk Grove if not in that area
-                    if (address.includes('placerville')) return false;
-                    if (address.includes('elk grove') && !userLocation.address?.toLowerCase().includes('elk grove')) {
-                      return false;
-                    }
-                    
-                    return true;
-                  });
+                  console.log("Calculating distances from user location:", userLocation);
+                  
+                  // Geocode each resource and calculate distance
+                  const orgsWithDistance = await Promise.all(
+                    matchedOrgs.map(async (org: any) => {
+                      if (!org.address) return { org, distance: 999 };
+                      
+                      try {
+                        // Geocode the resource address
+                        const geocodeResp = await fetch(
+                          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(org.address)}&format=json&limit=1`
+                        );
+                        const geocodeData = await geocodeResp.json();
+                        
+                        if (Array.isArray(geocodeData) && geocodeData.length > 0) {
+                          const resourceLat = parseFloat(geocodeData[0].lat);
+                          const resourceLon = parseFloat(geocodeData[0].lon);
+                          
+                          // Calculate distance using Haversine formula
+                          const distance = calculateDistance(
+                            userLocation.lat,
+                            userLocation.lng,
+                            resourceLat,
+                            resourceLon
+                          );
+                          
+                          console.log(`Distance to ${org.organization}: ${distance} miles`);
+                          return { org, distance };
+                        }
+                      } catch (e) {
+                        console.error(`Failed to geocode ${org.organization}:`, e);
+                      }
+                      
+                      return { org, distance: 999 }; // Unknown distance
+                    })
+                  );
+                  
+                  // Filter out resources more than 25 miles away and sort by distance
+                  matchedOrgs = orgsWithDistance
+                    .filter(({ distance }) => distance < 25)
+                    .sort((a, b) => a.distance - b.distance)
+                    .map(({ org }) => org);
+                  
+                  console.log(`Filtered to ${matchedOrgs.length} resources within 25 miles`);
                 }
                 
-                // Apply filters if provided
+                // Apply demographic filters if provided
                 if (Object.keys(userFilters).length > 0) {
                   matchedOrgs = matchedOrgs.filter((org: any) => {
                     let matches = true;
                     
-                    // For each filter, check if org meets the criteria
                     for (const [key, value] of Object.entries(userFilters)) {
                       if (value === true && org[key] !== true) {
                         matches = false;
@@ -408,49 +458,34 @@ Context: You have access to ${totalOrgs} organizations across ${resourcesData.le
                   });
                 }
                 
-                // Score and rank by number of matching services
+                // Score by matching services (already sorted by distance)
                 const scoredOrgs = matchedOrgs.map((org: any) => {
-                  let score = 0;
                   const matchedServices: string[] = [];
                   
-                  // Count matching demographics
                   if (userFilters.services_youth && org.services_youth) {
-                    score += 2;
                     matchedServices.push("youth");
                   }
                   if (userFilters.services_families && org.services_families) {
-                    score += 2;
                     matchedServices.push("families");
                   }
                   if (userFilters.services_lgbtq && org.services_lgbtq) {
-                    score += 2;
                     matchedServices.push("LGBTQ+ friendly");
                   }
                   if (userFilters.services_veterans && org.services_veterans) {
-                    score += 2;
                     matchedServices.push("veterans");
                   }
                   if (userFilters.wheelchair_accessible && org.wheelchair_accessible) {
-                    score += 1;
                     matchedServices.push("wheelchair accessible");
                   }
                   if (userFilters.services_pets_allowed && org.services_pets_allowed) {
-                    score += 1;
                     matchedServices.push("pets allowed");
                   }
                   
-                  // Bonus points for having contact info
-                  if (org.phone) score += 0.5;
-                  if (org.address) score += 0.5;
-                  if (org.website) score += 0.5;
-                  
-                  return { org, score, matchedServices };
+                  return { org, matchedServices };
                 });
                 
-                // Sort by score and take top 3-5
-                const topMatches = scoredOrgs
-                  .sort((a, b) => b.score - a.score)
-                  .slice(0, matchedOrgs.length < 5 ? 3 : 5);
+                // Take top 5 (already sorted by distance)
+                const topMatches = scoredOrgs.slice(0, 5);
                 
                 const recommendations = topMatches.map(({ org, matchedServices }) => ({
                   id: org.uuid,
