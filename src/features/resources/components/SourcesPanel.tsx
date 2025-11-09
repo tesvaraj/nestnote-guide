@@ -1,7 +1,7 @@
 // 📋 FRONTEND: Saved resources panel component
 // Shows the user's saved/bookmarked resources
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bookmark, MapPin, Phone, Clock, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -14,17 +14,67 @@ import { Textarea } from "@/components/ui/textarea";
 import { SavedResource } from "@/features/resources/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { calculateDistance } from "@/lib/distanceUtils";
 
 interface SourcesPanelProps {
   savedResources: SavedResource[];
   onRemoveResource: (id: string) => void;
+  location?: { lat: number; lng: number; address: string } | null;
 }
 
-export const SourcesPanel = ({ savedResources, onRemoveResource }: SourcesPanelProps) => {
+export const SourcesPanel = ({ savedResources, onRemoveResource, location }: SourcesPanelProps) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedResource, setSelectedResource] = useState<SavedResource | null>(null);
   const [interacted, setInteracted] = useState<string>("");
   const [feedback, setFeedback] = useState("");
+  const [distances, setDistances] = useState<Record<string, number>>({});
+
+  // Calculate distances when location or resources change
+  useEffect(() => {
+    if (!location || savedResources.length === 0) return;
+
+    const toFetch = savedResources.filter((r) => distances[r.id] === undefined && r.address);
+    if (toFetch.length === 0) return;
+
+    let cancelled = false;
+
+    const fetchDistances = async () => {
+      const entries: [string, number | null][] = await Promise.all(
+        toFetch.map(async (r) => {
+          try {
+            const resp = await fetch(
+              `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(r.address)}&format=json&limit=1`
+            );
+            const data = await resp.json();
+            if (Array.isArray(data) && data.length > 0) {
+              const lat = parseFloat(data[0].lat);
+              const lon = parseFloat(data[0].lon);
+              const miles = calculateDistance(location.lat, location.lng, lat, lon);
+              return [r.id, miles] as [string, number];
+            }
+            return [r.id, null];
+          } catch (e) {
+            return [r.id, null];
+          }
+        })
+      );
+
+      if (!cancelled) {
+        setDistances((prev) => {
+          const next = { ...prev } as Record<string, number>;
+          for (const [id, dist] of entries) {
+            if (dist != null) next[id] = dist;
+          }
+          return next;
+        });
+      }
+    };
+
+    fetchDistances();
+    return () => {
+      cancelled = true;
+    };
+  }, [savedResources, location]);
 
   const handleDeleteClick = (resource: SavedResource) => {
     setSelectedResource(resource);
@@ -117,6 +167,14 @@ export const SourcesPanel = ({ savedResources, onRemoveResource }: SourcesPanelP
                     <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                     <span className="text-foreground">{resource.address}</span>
                   </div>
+                  {location && distances[resource.id] !== undefined && (
+                    <div className="flex items-center gap-2 pl-6">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      <span className="text-foreground font-medium text-xs">
+                        Number of miles is: {distances[resource.id].toFixed(1)} mi
+                      </span>
+                    </div>
+                  )}
                   {resource.phone && (
                     <div className="flex items-start gap-2">
                       <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />

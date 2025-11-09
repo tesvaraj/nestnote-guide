@@ -175,6 +175,7 @@ const Index = () => {
             <SourcesPanel 
               savedResources={savedResources}
               onRemoveResource={(id) => setSavedResources(prev => prev.filter(r => r.id !== id))}
+              location={location}
             />
           </div>
 
