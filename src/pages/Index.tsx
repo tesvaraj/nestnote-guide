@@ -84,25 +84,28 @@ const Index = () => {
       <GradientBackground />
       <div className="h-screen flex flex-col relative z-10">
         {/* Header */}
-        <header className="h-14 border-b border-panel-border flex items-center justify-between px-4 bg-card/80 backdrop-blur">
+        <header className="h-14 border-b border-panel-border flex items-center justify-between px-4 relative overflow-hidden">
+          {/* Gradient background matching intake stage */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--gradient-yellow))] via-[hsl(var(--gradient-blue-light))] to-[hsl(var(--gradient-blue))] -z-10" />
+          
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setLeftPanelOpen(!leftPanelOpen)}
-              className="lg:hidden"
+              className="lg:hidden text-white hover:bg-white/20"
             >
               {leftPanelOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
-            <h1 className="text-xl font-bold text-foreground">
-              Find<span className="text-primary">Haven</span>
+            <h1 className="text-3xl font-['Cute_Font'] text-white drop-shadow-lg">
+              Haven
             </h1>
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setRightPanelOpen(!rightPanelOpen)}
-            className="lg:hidden"
+            className="lg:hidden text-white hover:bg-white/20"
           >
             {rightPanelOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>

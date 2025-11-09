@@ -177,8 +177,10 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
   const isSensitiveStep = sensitiveSteps.includes(step);
 
   // Calculate total steps and progress
+  // Adjust current step if we skipped the housing application section
   const totalSteps = formData.housingApplicationOptIn === "no" ? 11 : 33;
-  const progressPercentage = (step / totalSteps) * 100;
+  const adjustedStep = formData.housingApplicationOptIn === "no" && step > 6 ? step - 22 : step;
+  const progressPercentage = (adjustedStep / totalSteps) * 100;
 
   if (isPaused) {
     return (
@@ -252,7 +254,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         <div className="mb-8 space-y-2">
           <Progress value={progressPercentage} className="h-2" />
           <p className="text-xs text-white/70 text-right">
-            Step {step} of {totalSteps}
+            Step {adjustedStep} of {totalSteps}
           </p>
         </div>
 
@@ -269,7 +271,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 1 && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">Let's start with your name</h2>
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">Let's start with your name</h2>
               <p className="text-white/90 text-lg drop-shadow">
                 What would you like us to call you? This can be your given name or any name you prefer.
               </p>
@@ -293,7 +295,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 2 && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">How old are you?</h2>
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">How old are you?</h2>
               <p className="text-white/90 text-lg drop-shadow">This helps us match you with age-specific programs.</p>
             </div>
             <div className="max-w-md mx-auto space-y-4">
@@ -326,7 +328,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 3 && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Where are you staying right now?
               </h2>
               <p className="text-white/90 text-lg drop-shadow">
@@ -380,7 +382,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 4 && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 What do you need most right now?
               </h2>
               <p className="text-white/90 text-lg drop-shadow">
@@ -436,7 +438,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 5 && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 How would you describe your current search for housing?
               </h2>
             </div>
@@ -486,7 +488,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 6 && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Housing application information
               </h2>
               <p className="text-white/90 text-lg drop-shadow">
@@ -551,7 +553,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 7 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Are you or anyone in your household required to register on the sex offender registry?
               </h2>
             </div>
@@ -595,7 +597,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 8 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Where do you and your family sleep most frequently?
               </h2>
             </div>
@@ -627,7 +629,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 9 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Have you been homeless for longer than a year?
               </h2>
             </div>
@@ -671,7 +673,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 10 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Is anyone in your household pregnant?
               </h2>
             </div>
@@ -715,7 +717,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 11 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">Do you have any children?</h2>
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">Do you have any children?</h2>
             </div>
             <div className="max-w-md mx-auto space-y-4">
               <RadioGroup
@@ -757,7 +759,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 12 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Are there children in your household under five years old?
               </h2>
             </div>
@@ -801,7 +803,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 13 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Do you have custody of your children?
               </h2>
             </div>
@@ -872,7 +874,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 14 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Is your household a single-parent household?
               </h2>
             </div>
@@ -916,7 +918,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 15 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Were you enrolled in foster care after the age of 16?
               </h2>
             </div>
@@ -960,7 +962,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 16 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Do you or anyone in your household have any long-term disability or ongoing health disability?
               </h2>
             </div>
@@ -1004,7 +1006,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 17 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Do you or anyone in your household require housing-related accommodations?
               </h2>
               <p className="text-white/90 text-base drop-shadow">Select all that apply</p>
@@ -1055,7 +1057,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 18 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Are all adults in your household able to independently care for themselves?
               </h2>
               <p className="text-white/90 text-base drop-shadow">
@@ -1102,7 +1104,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 19 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 What is your combined (household) monthly income before taxes?
               </h2>
             </div>
@@ -1134,7 +1136,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 20 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Do you have a housing voucher or dedicated rental subsidy that will last for at least one year?
               </h2>
             </div>
@@ -1178,7 +1180,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 21 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">Barriers to housing</h2>
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">Barriers to housing</h2>
               <p className="text-white/90 text-lg drop-shadow">
                 Has having poor credit or no credit/rental history prevented you from obtaining permanent housing?
               </p>
@@ -1223,7 +1225,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 22 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Have you or anyone in your household had an eviction in the past seven years?
               </h2>
             </div>
@@ -1267,7 +1269,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 23 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Have you or anyone in your household been affected by the justice or criminal system that prevented you
                 from being housed?
               </h2>
@@ -1312,7 +1314,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 24 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Have you or anyone in your household struggled to obtain permanent housing due to immigration status?
               </h2>
             </div>
@@ -1356,7 +1358,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 25 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Do you have 2–3 trusted contacts you can list on a housing application?
               </h2>
             </div>
@@ -1400,7 +1402,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 26 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">Health crises</h2>
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">Health crises</h2>
               <p className="text-white/90 text-lg drop-shadow">
                 Have you or any household member experienced a physical health crisis within the last 3 months?
               </p>
@@ -1445,7 +1447,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 27 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Have you or any household member experienced a mental health crisis within the last 3 months?
               </h2>
             </div>
@@ -1489,7 +1491,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 28 && formData.housingApplicationOptIn === "yes" && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">Trauma and safety</h2>
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">Trauma and safety</h2>
               <p className="text-white/90 text-lg drop-shadow">
                 In the past 3 months, have you or anyone in your household experienced any of the following: domestic
                 violence, dating violence, stalking, sexual assault, or human trafficking?
@@ -1535,7 +1537,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 29 && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">Health and wellness</h2>
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">Health and wellness</h2>
               <p className="text-white/90 text-lg drop-shadow">
                 Are there any health concerns we should know about to help you better?
               </p>
@@ -1598,7 +1600,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 30 && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">Education and goals</h2>
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">Education and goals</h2>
               <p className="text-white/90 text-lg drop-shadow">Where are you at with school?</p>
             </div>
             <div className="max-w-md mx-auto space-y-4">
@@ -1647,7 +1649,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 31 && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">Voluntary Identification</h2>
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">Voluntary Identification</h2>
               <p className="text-white/90 text-lg drop-shadow">
                 Do you have any disabilities? This helps us search for specific resources.
               </p>
@@ -1710,7 +1712,7 @@ export default function IntakeForm({ onComplete }: IntakeFormProps) {
         {step === 32 && (
           <div className="space-y-8 text-center animate-in fade-in duration-500">
             <div className="space-y-3">
-              <h2 className="text-3xl md:text-4xl font-light text-white drop-shadow-lg">
+              <h2 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg">
                 Anything else you'd like to share?
               </h2>
               <p className="text-white/90 text-lg drop-shadow">
