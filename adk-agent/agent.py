@@ -367,8 +367,27 @@ USER LOCATION: {location_text}
 
 HOW TO RESPOND:
 1. Write 1 brief sentence (e.g., "Here are some options near you.")
-2. IMMEDIATELY call search_local_resources tool
+2. IMMEDIATELY call search_local_resources tool with the RIGHT category and filters
 3. STOP - Do NOT describe what you found
+
+CATEGORY MAPPING (Match user request to category):
+- Youth shelter / runaway teen → "Runaway/Youth Shelters" + services_youth: true
+- Food / meals / hungry / eat → "Soup Kitchens" or "Food Pantries"
+- General shelter / housing → "Homeless Shelters"
+- Family housing → "Homeless Shelters" + services_families: true
+- Transitional housing → "Transitional Housing"
+- Drop-in center → "Homeless Drop In Centers"
+- Domestic violence → "Domestic Violence Shelters"
+- Healthcare → "Healthcare/Medical Clinics"
+- Mental health → "Mental Health Treatment"
+
+FILTERS TO APPLY (Based on user profile):
+- Age <18 or mentions "youth/teen" → services_youth: true
+- Has children → services_families: true  
+- Mentions LGBTQ+ → services_lgbtq: true
+- Veteran → services_veterans: true
+- Wheelchair/mobility → wheelchair_accessible: true
+- Has pets → services_pets_allowed: true
 
 The search_local_resources tool will automatically create resource CARDS that show:
 - Organization names
@@ -389,9 +408,7 @@ YOUR TEXT should NEVER be:
 ❌ Any descriptions of specific organizations
 
 WORKFLOW:
-User asks → You write 1 sentence → Call tool → Tool creates cards → DONE
-
-The cards show everything. You show nothing except 1 kind sentence.
+User asks → You write 1 sentence → Call tool with proper category & filters → Tool creates cards → DONE
 
 Available categories:
 {categories_text}
@@ -400,14 +417,7 @@ Context:
 - {total_orgs} organizations across {num_categories} service categories
 - User location: {location_text}
 
-🚨 REMEMBER: Call search_local_resources tool, write 1 sentence, STOP 🚨"""
-
-Context:
-- Users may be in vulnerable situations - be respectful and supportive
-- You have access to {total_orgs} organizations across {num_categories} service categories
-- User's current location: {location_text}
-
-🚨 REMEMBER: Maximum 1-2 sentences. NEVER describe what resources do. Cards show everything.🚨"""
+🚨 REMEMBER: Call search_local_resources with CORRECT category based on user's request, write 1 sentence, STOP 🚨"""
 
 # Create the root agent (with lazy instruction)
 # Wrap in try-except to prevent import failures
